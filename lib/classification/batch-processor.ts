@@ -115,10 +115,12 @@ export async function batchClassify(batchId: string, userId: string): Promise<vo
       uniqueDescMap.set(tx.description, existing)
     }
 
+    type TxLite = { id: string; description: string; amount: number }
+
     const uniqueTransactions = Array.from(uniqueDescMap.entries()).map(([desc, ids]) => ({
       id: ids[0], // Use first ID for classification
       description: desc,
-      amount: debitTxs.find(t => t.id === ids[0])!.amount,
+      amount: debitTxs.find((t: TxLite) => t.id === ids[0])!.amount,
       allIds: ids,
     }))
 
@@ -139,7 +141,11 @@ export async function batchClassify(batchId: string, userId: string): Promise<vo
           const results = await classifyBatch(
             userId,
             categories,
-            chunk.map(t => ({ id: t.id, description: t.description, amount: t.amount })),
+            chunk.map((t: TxLite) => ({
+              id: t.id,
+              description: t.description,
+              amount: t.amount,
+            })),
             fallbackCategory.id
           )
 

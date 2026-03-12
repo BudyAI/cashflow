@@ -29,7 +29,7 @@ export async function buildClassificationPrompt(
       : ''
 
   const transactionList = transactions
-    .map(t => `{"id":"${t.id}","desc":"${t.description}","amount":${t.amount}}`)
+    .map((t: { id: string; description: string; amount: number }) => `{"id":"${t.id}","desc":"${t.description}","amount":${t.amount}}`)
     .join('\n')
 
   const categoryIds = categories.map(c => c.id).join(', ')
