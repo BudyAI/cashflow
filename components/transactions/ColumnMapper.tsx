@@ -214,7 +214,7 @@ function MappingRow({
         }`}
       >
         <option value="">{allowNone ? '— none —' : '— select column —'}</option>
-        {headers.map(h => (
+        {headers.map((h: string) => (
           <option key={h} value={h}>{h}</option>
         ))}
       </select>
