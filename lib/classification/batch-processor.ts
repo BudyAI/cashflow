@@ -97,8 +97,8 @@ export async function batchClassify(batchId: string, userId: string): Promise<vo
     }
 
     // Auto-classify credits (positive amounts) as Income
-    const creditTxs = transactions.filter(t => t.amount > 0)
-    const debitTxs = transactions.filter(t => t.amount <= 0)
+    const creditTxs = transactions.filter((t: { id: string; description: string; amount: number }) => t.amount > 0)
+    const debitTxs = transactions.filter((t: { id: string; description: string; amount: number }) => t.amount <= 0)
 
     if (incomeCategory && creditTxs.length > 0) {
       await prisma.transaction.updateMany({
