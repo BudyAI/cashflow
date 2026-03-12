@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
-import { nanoid } from 'nanoid'
+import crypto from 'crypto'
 
 function getPrisma() {
   const connectionString = process.env.DATABASE_URL
@@ -24,7 +24,6 @@ const GENERAL_CATEGORIES = [
   { name: 'Food & Dining', type: 'expense', color: '#eab308', sortOrder: 7 },
   { name: 'Transport', type: 'expense', color: '#0ea5e9', sortOrder: 8 },
   { name: 'Utilities', type: 'expense', color: '#84cc16', sortOrder: 9 },
-  { name: 'Rent / Mortgage', type: 'expense', color: '#a855f7', sortOrder: 10 },
   { name: 'Other Expenses', type: 'expense', color: '#94a3b8', sortOrder: 99 },
 ]
 
@@ -36,7 +35,7 @@ async function main() {
     if (!existing) {
       await prisma.category.create({
         data: {
-          id: nanoid(),
+          id: crypto.randomUUID(),
           userId: null,
           name: cat.name,
           color: cat.color,
@@ -45,16 +44,18 @@ async function main() {
           sortOrder: cat.sortOrder,
         },
       })
-      console.log(`Created general category: ${cat.name}`)
+      console.log('Created general category: ' + cat.name)
     } else {
-      console.log(`General category already exists: ${cat.name}`)
+      console.log('General category already exists: ' + cat.name)
     }
   }
 }
 
-main()
-  .catch((e) => {
-    console.error(e)
-    process.exit(1)
-  })
-  .finally(() => prisma.$disconnect())
+try {
+  await main()
+} catch (e) {
+  console.error(e)
+  process.exit(1)
+} finally {
+  await prisma.$disconnect()
+}
