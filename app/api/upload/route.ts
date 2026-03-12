@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { parseExcel } from '@/lib/excel/parser'
+import { parseExcel, parseExcelWithMapping } from '@/lib/excel/parser'
+import type { ColumnMapping } from '@/types'
 import { batchClassify } from '@/lib/classification/batch-processor'
 import { nanoid } from 'nanoid'
 
@@ -35,8 +36,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 })
     }
 
+    const columnMappingRaw = formData.get('columnMapping') as string | null
+    const columnMapping: ColumnMapping | null = columnMappingRaw ? JSON.parse(columnMappingRaw) : null
+
     const buffer = Buffer.from(await file.arrayBuffer())
-    const { transactions: parsed, errors } = parseExcel(buffer)
+    const { transactions: parsed, errors } = columnMapping
+      ? parseExcelWithMapping(buffer, columnMapping)
+      : parseExcel(buffer)
 
     if (parsed.length === 0) {
       return NextResponse.json({ error: 'No valid transactions found', details: errors }, { status: 400 })

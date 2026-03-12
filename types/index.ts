@@ -101,6 +101,30 @@ export interface UploadBatch {
   createdAt: string
 }
 
+export interface ColumnMapping {
+  date: string
+  description: string
+  amountMode: 'single' | 'debitcredit'
+  amount?: string
+  debit?: string
+  credit?: string
+  balance?: string
+}
+
+export interface FilePreview {
+  headers: string[]
+  sampleRows: string[][]
+  suggestedMapping: {
+    date: string | null
+    description: string | null
+    amountMode: 'single' | 'debitcredit'
+    amount: string | null
+    debit: string | null
+    credit: string | null
+    balance: string | null
+  }
+}
+
 export interface TransactionFilters {
   search?: string
   categoryId?: string
