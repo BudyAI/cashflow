@@ -102,7 +102,7 @@ export async function batchClassify(batchId: string, userId: string): Promise<vo
 
     if (incomeCategory && creditTxs.length > 0) {
       await prisma.transaction.updateMany({
-        where: { id: { in: creditTxs.map(t => t.id) } },
+        where: { id: { in: creditTxs.map((t: { id: string; description: string; amount: number }) => t.id) } },
         data: { categoryId: incomeCategory.id, categoryConfidence: 1, classifiedBy: 'claude' },
       })
     }
