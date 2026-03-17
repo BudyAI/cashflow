@@ -39,37 +39,28 @@ async function classifyBatch(
 ): Promise<ClassificationResult[]> {
   const prompt = await buildClassificationPrompt(userId, categories, transactions)
 
-  try {
-    const message = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
-      max_tokens: 4096,
-      messages: [{ role: 'user', content: prompt }],
-    })
+  const message = await anthropic.messages.create({
+    model: 'claude-3-5-sonnet-20241022',
+    max_tokens: 4096,
+    messages: [{ role: 'user', content: prompt }],
+  })
 
-    const content = message.content[0]
-    if (content.type !== 'text') throw new Error('Unexpected response type')
+  const content = message.content[0]
+  if (content.type !== 'text') throw new Error('Unexpected response type')
 
-    // Extract JSON array from response
-    const jsonMatch = content.text.match(/\[[\s\S]*\]/)
-    if (!jsonMatch) throw new Error('No JSON array in response')
+  // Extract JSON array from response
+  const jsonMatch = content.text.match(/\[[\s\S]*\]/)
+  if (!jsonMatch) throw new Error('No JSON array in response')
 
-    const results = JSON.parse(jsonMatch[0]) as ClassificationResult[]
+  const results = JSON.parse(jsonMatch[0]) as ClassificationResult[]
 
-    // Validate each result has required fields
-    const validCategoryIds = new Set(categories.map(c => c.id))
-    return results.map(r => ({
-      id: r.id,
-      categoryId: validCategoryIds.has(r.categoryId) ? r.categoryId : fallbackCategoryId,
-      confidence: typeof r.confidence === 'number' ? Math.max(0, Math.min(1, r.confidence)) : 0.5,
-    }))
-  } catch {
-    // Return fallback for all transactions in this batch
-    return transactions.map(t => ({
-      id: t.id,
-      categoryId: fallbackCategoryId,
-      confidence: 0,
-    }))
-  }
+  // Validate each result has required fields
+  const validCategoryIds = new Set(categories.map(c => c.id))
+  return results.map(r => ({
+    id: r.id,
+    categoryId: validCategoryIds.has(r.categoryId) ? r.categoryId : fallbackCategoryId,
+    confidence: typeof r.confidence === 'number' ? Math.max(0, Math.min(1, r.confidence)) : 0.5,
+  }))
 }
 
 export async function batchClassify(batchId: string, userId: string): Promise<void> {

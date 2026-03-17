@@ -79,7 +79,7 @@ function extractHtmlTable(html: string): string[][] {
 }
 
 /** Extract raw string rows from any supported file format */
-function extractRawRows(buffer: Buffer): string[][] | { error: string } {
+export function extractRawRows(buffer: Buffer): string[][] | { error: string } {
   const content = buffer.toString('utf8')
 
   // Detect HTML file (bank export)
@@ -124,7 +124,7 @@ function extractRawRows(buffer: Buffer): string[][] | { error: string } {
 }
 
 /** Find the header row index using keyword detection, falling back to first non-empty row */
-function findHeaderRowIndex(rows: string[][]): number {
+export function findHeaderRowIndex(rows: string[][]): number {
   // Try strict detection: row with date + amount/debit/credit keywords
   for (let i = 0; i < Math.min(rows.length, 10); i++) {
     const normalized = rows[i].map(normalizeColumnName)

@@ -68,7 +68,7 @@ export function UploadZone() {
     <div className="space-y-3">
       <div
         {...getRootProps()}
-        className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
+        className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors min-h-[160px] flex items-center justify-center ${
           isDisabled
             ? 'opacity-60 cursor-not-allowed border-slate-200 bg-white'
             : isDragActive
@@ -101,6 +101,9 @@ export function UploadZone() {
             </p>
             <p className="text-sm text-slate-400 mt-1">
               Drag & drop or click to select — .xlsx or .xls
+            </p>
+            <p className="text-xs text-slate-300 mt-1">
+              Expected columns: Date, Description, Amount (or Debit / Credit)
             </p>
           </div>
         </div>

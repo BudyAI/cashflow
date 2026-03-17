@@ -15,7 +15,9 @@ function formatDate(iso: string) {
 }
 
 function BatchHistoryList({ onDeleted }: { onDeleted: () => void }) {
-  const { data: batches, mutate: mutateBatches } = useSWR<UploadBatch[]>('/api/upload', fetcher, { refreshInterval: 0 })
+  const { data: batches, mutate: mutateBatches } = useSWR<UploadBatch[]>('/api/upload', fetcher, {
+    refreshInterval: (data) => data?.some(b => b.status === 'processing') ? 3000 : 0,
+  })
   const [deleting, setDeleting] = useState<string | null>(null)
 
   if (!batches || batches.length === 0) return null

@@ -1,11 +1,39 @@
 'use client'
-import { Search } from 'lucide-react'
+import { useState } from 'react'
+import { Search, Sparkles } from 'lucide-react'
 import { useTransactionContext } from './TransactionContext'
 import { useCategories } from '@/hooks/useCategories'
 import { AddCategoryButton } from './AddCategoryButton'
 
 export function TransactionFilters() {
-  const { filters, updateFilter } = useTransactionContext()
+  const { filters, updateFilter, mutate } = useTransactionContext()
+  const [classifying, setClassifying] = useState(false)
+
+  const handleAutoClassify = async () => {
+    setClassifying(true)
+    try {
+      const res = await fetch('/api/classify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ all: true }),
+      })
+      const json = await res.json()
+      if (json.count === 0) return
+
+      // Poll until the batch completes, then refresh the table
+      const { batchId } = json
+      const poll = setInterval(async () => {
+        const s = await fetch(`/api/upload/${batchId}/status`).then(r => r.json())
+        if (s.status === 'complete' || s.status === 'failed') {
+          clearInterval(poll)
+          setClassifying(false)
+          mutate()
+        }
+      }, 2000)
+    } catch {
+      setClassifying(false)
+    }
+  }
   const { categories } = useCategories()
 
   return (
@@ -58,6 +86,19 @@ export function TransactionFilters() {
         onChange={e => updateFilter('dateTo', e.target.value || undefined)}
         className="text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
+
+      <button
+        onClick={handleAutoClassify}
+        disabled={classifying}
+        className={`ml-auto flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+          classifying
+            ? 'bg-purple-50 text-purple-400 cursor-not-allowed'
+            : 'bg-purple-50 text-purple-600 hover:bg-purple-100'
+        }`}
+      >
+        <Sparkles className={`w-4 h-4 ${classifying ? 'animate-pulse' : ''}`} />
+        {classifying ? 'Categorizing…' : 'Auto-categorize'}
+      </button>
     </div>
   )
 }

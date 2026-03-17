@@ -1,13 +1,9 @@
 'use client'
 import { TrendingUp, TrendingDown, DollarSign, Flame } from 'lucide-react'
-import { useCashflowContext } from './CashflowContext'
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(amount)
-}
+import { useCashflowContext, formatCurrency } from './CashflowContext'
 
 export function SummaryCards() {
-  const { summary, isLoading } = useCashflowContext()
+  const { summary, isLoading, currency } = useCashflowContext()
 
   const numMonths = summary?.periods?.length ?? 0
   const burnRate = numMonths > 0 ? (summary?.totalExpenses ?? 0) / numMonths : 0
@@ -66,7 +62,7 @@ export function SummaryCards() {
           </div>
           <div>
             <p className="text-sm text-slate-500">{label}</p>
-            <p className={`text-2xl font-bold ${color}`}>{formatCurrency(value)}</p>
+            <p className={`text-2xl font-bold ${color}`}>{formatCurrency(value, currency)}</p>
           </div>
         </div>
       ))}

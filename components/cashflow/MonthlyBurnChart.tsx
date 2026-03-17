@@ -11,15 +11,10 @@ import {
   Cell,
   LabelList,
 } from 'recharts'
-import { useCashflowContext } from './CashflowContext'
-
-function formatK(value: number) {
-  if (Math.abs(value) >= 1000) return `$${(value / 1000).toFixed(1)}k`
-  return `$${value.toFixed(0)}`
-}
+import { useCashflowContext, formatK } from './CashflowContext'
 
 export function MonthlyBurnChart() {
-  const { summary, isLoading } = useCashflowContext()
+  const { summary, isLoading, currency } = useCashflowContext()
 
   if (isLoading) {
     return <div className="animate-pulse bg-slate-100 rounded-xl h-80" />
@@ -40,9 +35,9 @@ export function MonthlyBurnChart() {
           <BarChart data={data} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
             <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#94a3b8" />
-            <YAxis tickFormatter={formatK} tick={{ fontSize: 12 }} stroke="#94a3b8" />
+            <YAxis tickFormatter={v => formatK(v, currency)} tick={{ fontSize: 12 }} stroke="#94a3b8" />
             <Tooltip
-              formatter={(value) => [`$${Number(value).toLocaleString()}`, 'Net (Income − Expenses)']}
+              formatter={(value) => [formatK(Number(value), currency), 'Net (Income − Expenses)']}
               contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '12px' }}
             />
             <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="4 4" />
@@ -54,7 +49,7 @@ export function MonthlyBurnChart() {
                 dataKey="net"
                 position="inside"
                 fontSize={11}
-                formatter={(value: unknown) => formatK(Number(value))}
+                formatter={(value: unknown) => formatK(Number(value), currency)}
                 fill="#ffffff"
               />
             </Bar>

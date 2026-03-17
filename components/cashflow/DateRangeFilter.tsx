@@ -1,8 +1,14 @@
 'use client'
 import { useCashflowContext } from './CashflowContext'
+import type { Currency } from './CashflowContext'
+
+const CURRENCIES: { value: Currency; label: string }[] = [
+  { value: 'USD', label: '$ USD' },
+  { value: 'ILS', label: '₪ ILS' },
+]
 
 export function DateRangeFilter() {
-  const { dateFrom, dateTo, setDateFrom, setDateTo } = useCashflowContext()
+  const { dateFrom, dateTo, setDateFrom, setDateTo, currency, setCurrency } = useCashflowContext()
 
   return (
     <div className="flex items-center gap-3 bg-white rounded-xl border border-slate-200 p-4">
@@ -28,6 +34,22 @@ export function DateRangeFilter() {
           Clear
         </button>
       )}
+
+      <div className="ml-auto flex items-center gap-1 bg-slate-100 rounded-lg p-1">
+        {CURRENCIES.map(({ value, label }) => (
+          <button
+            key={value}
+            onClick={() => setCurrency(value)}
+            className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+              currency === value
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
     </div>
   )
 }

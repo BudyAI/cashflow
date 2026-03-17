@@ -9,15 +9,10 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts'
-import { useCashflowContext } from './CashflowContext'
-
-function formatK(value: number) {
-  if (Math.abs(value) >= 1000) return `$${(value / 1000).toFixed(1)}k`
-  return `$${value.toFixed(0)}`
-}
+import { useCashflowContext, formatK } from './CashflowContext'
 
 export function MonthlyBarChart() {
-  const { summary, isLoading } = useCashflowContext()
+  const { summary, isLoading, currency } = useCashflowContext()
 
   if (isLoading) {
     return <div className="animate-pulse bg-slate-100 rounded-xl h-80" />
@@ -39,9 +34,9 @@ export function MonthlyBarChart() {
           <BarChart data={data} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
             <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#94a3b8" />
-            <YAxis tickFormatter={formatK} tick={{ fontSize: 12 }} stroke="#94a3b8" />
+            <YAxis tickFormatter={v => formatK(v, currency)} tick={{ fontSize: 12 }} stroke="#94a3b8" />
             <Tooltip
-              formatter={(value) => [`$${Number(value).toLocaleString()}`, '']}
+              formatter={(value) => [formatK(Number(value), currency), '']}
               contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '12px' }}
             />
             <Legend />

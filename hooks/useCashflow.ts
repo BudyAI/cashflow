@@ -5,9 +5,12 @@ import type { CashflowSummary } from '@/types'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
+export type Currency = 'USD' | 'ILS'
+
 export function useCashflow() {
   const [dateFrom, setDateFrom] = useState<string>('')
   const [dateTo, setDateTo] = useState<string>('')
+  const [currency, setCurrency] = useState<Currency>('USD')
 
   const params = new URLSearchParams()
   if (dateFrom) params.set('dateFrom', dateFrom)
@@ -26,5 +29,7 @@ export function useCashflow() {
     dateTo,
     setDateFrom,
     setDateTo,
+    currency,
+    setCurrency,
   }
 }

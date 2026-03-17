@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
+import { mutate as globalMutate } from 'swr'
 import type { UploadBatchStatus, FilePreview, ColumnMapping } from '@/types'
 
 export type UploadStep = 'idle' | 'previewing' | 'mapping' | 'uploading'
@@ -22,8 +23,13 @@ export function useUploadBatch() {
       try {
         const res = await fetch(`/api/upload/${batchId}/status`)
         if (res.ok) {
-          const data = await res.json()
+          const data: UploadBatchStatus = await res.json()
           setStatus(data)
+          if (data.status === 'complete' || data.status === 'failed') {
+            clearInterval(intervalRef.current!)
+            // Refresh transaction table to show classified transactions
+            globalMutate((key: unknown) => typeof key === 'string' && key.startsWith('/api/transactions'))
+          }
         }
       } catch {
         // ignore

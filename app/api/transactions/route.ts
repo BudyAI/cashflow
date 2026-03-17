@@ -56,3 +56,21 @@ export async function GET(request: NextRequest) {
     totalPages: Math.ceil(total / pageSize),
   })
 }
+
+export async function DELETE(request: NextRequest) {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const { ids } = await request.json() as { ids: string[] }
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return NextResponse.json({ error: 'ids array required' }, { status: 400 })
+  }
+
+  const { count } = await prisma.transaction.deleteMany({
+    where: { id: { in: ids }, userId: session.user.id },
+  })
+
+  return NextResponse.json({ deleted: count })
+}

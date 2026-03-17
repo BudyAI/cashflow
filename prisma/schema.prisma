@@ -53,6 +53,7 @@ model User {
   transactions          Transaction[]
   categories            Category[]
   classificationHistory ClassificationHistory[]
+  agingReports          AgingReport[]
 }
 
 model Transaction {
@@ -119,4 +120,19 @@ model UploadBatch {
   errors        String   @default("[]")
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+}
+
+model AgingReport {
+  id         String   @id @default(cuid())
+  userId     String
+  reportDate DateTime
+  current    Float    @default(0)
+  days1to30  Float    @default(0)
+  days31to60 Float    @default(0)
+  days61to90 Float    @default(0)
+  days90plus Float    @default(0)
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, reportDate])
 }

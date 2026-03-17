@@ -1,5 +1,5 @@
 'use client'
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import { Trash2 } from 'lucide-react'
 import { useTransactionContext } from './TransactionContext'
 import { CategorySelect } from './CategorySelect'
@@ -16,6 +16,32 @@ function formatDate(dateStr: string): string {
 
 export function TransactionTable() {
   const { transactions, total, totalPages, page, isLoading, updateFilter, mutate } = useTransactionContext()
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [deleting, setDeleting] = useState(false)
+
+  const allIds = transactions.map((tx: TransactionWithCategory) => tx.id)
+  const allSelected = allIds.length > 0 && allIds.every(id => selected.has(id))
+  const someSelected = selected.size > 0
+
+  const toggleAll = () => {
+    if (allSelected) {
+      setSelected(prev => {
+        const next = new Set(prev)
+        allIds.forEach(id => next.delete(id))
+        return next
+      })
+    } else {
+      setSelected(prev => new Set(Array.from(prev).concat(allIds)))
+    }
+  }
+
+  const toggleOne = (id: string) => {
+    setSelected(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
 
   const handleUpdateCategory = useCallback(async (id: string, categoryId: string) => {
     const res = await fetch(`/api/transactions/${id}`, {
@@ -32,6 +58,22 @@ export function TransactionTable() {
     const res = await fetch(`/api/transactions/${id}`, { method: 'DELETE' })
     if (res.ok) mutate()
   }, [mutate])
+
+  const handleDeleteSelected = async () => {
+    if (!confirm(`Delete ${selected.size} transaction${selected.size > 1 ? 's' : ''}?`)) return
+    setDeleting(true)
+    try {
+      await fetch('/api/transactions', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: Array.from(selected) }),
+      })
+      setSelected(new Set())
+      mutate()
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   if (isLoading) {
     return (
@@ -56,10 +98,39 @@ export function TransactionTable() {
 
   return (
     <div>
+      {/* Bulk action bar */}
+      {someSelected && (
+        <div className="flex items-center gap-3 px-4 py-2 bg-blue-50 border-b border-blue-100">
+          <span className="text-sm text-blue-700 font-medium">{selected.size} selected</span>
+          <button
+            onClick={handleDeleteSelected}
+            disabled={deleting}
+            className="flex items-center gap-1.5 px-3 py-1 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            {deleting ? 'Deleting…' : 'Delete selected'}
+          </button>
+          <button
+            onClick={() => setSelected(new Set())}
+            className="text-sm text-blue-500 hover:text-blue-700"
+          >
+            Clear selection
+          </button>
+        </div>
+      )}
+
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-100">
+              <th className="px-4 py-3 w-8">
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  onChange={toggleAll}
+                  className="rounded border-slate-300 accent-blue-600 cursor-pointer"
+                />
+              </th>
               <th className="text-left px-4 py-3 font-medium text-slate-500">Date</th>
               <th className="text-left px-4 py-3 font-medium text-slate-500">Description</th>
               <th className="text-left px-4 py-3 font-medium text-slate-500">Category</th>
@@ -71,7 +142,20 @@ export function TransactionTable() {
           </thead>
           <tbody>
             {transactions.map((tx: TransactionWithCategory) => (
-              <tr key={tx.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+              <tr
+                key={tx.id}
+                className={`border-b border-slate-50 transition-colors ${
+                  selected.has(tx.id) ? 'bg-blue-50' : 'hover:bg-slate-50'
+                }`}
+              >
+                <td className="px-4 py-3">
+                  <input
+                    type="checkbox"
+                    checked={selected.has(tx.id)}
+                    onChange={() => toggleOne(tx.id)}
+                    className="rounded border-slate-300 accent-blue-600 cursor-pointer"
+                  />
+                </td>
                 <td className="px-4 py-3 text-slate-500 whitespace-nowrap">{formatDate(tx.date)}</td>
                 <td className="px-4 py-3 text-slate-900 max-w-xs truncate" title={tx.originalDescription}>
                   {tx.originalDescription}
@@ -115,6 +199,7 @@ export function TransactionTable() {
       <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
         <p className="text-sm text-slate-500">
           {total} transactions total
+          {someSelected && <span className="ml-2 text-blue-600">· {selected.size} selected</span>}
         </p>
         <div className="flex items-center gap-2">
           <button

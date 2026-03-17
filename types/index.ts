@@ -101,6 +101,22 @@ export interface UploadBatch {
   createdAt: string
 }
 
+export interface AgingColumnMapping {
+  dueDate: string        // required
+  amount: string         // required
+  currency?: string
+  customer?: string
+  contactName?: string
+  issueDate?: string
+  invoiceNumber?: string
+}
+
+export interface AgingFilePreview {
+  headers: string[]
+  sampleRows: string[][]
+  suggestedMapping: Partial<AgingColumnMapping>
+}
+
 export interface ColumnMapping {
   date: string
   description: string
