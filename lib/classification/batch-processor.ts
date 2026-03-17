@@ -88,12 +88,12 @@ export async function batchClassify(batchId: string, userId: string): Promise<vo
     }
 
     // Auto-classify credits (positive amounts) as Income
-    const creditTxs = transactions.filter(t => t.amount > 0)
-    const debitTxs = transactions.filter(t => t.amount <= 0)
+    const creditTxs = transactions.filter((t: { id: string; description: string; amount: number }) => t.amount > 0)
+    const debitTxs = transactions.filter((t: { id: string; description: string; amount: number }) => t.amount <= 0)
 
     if (incomeCategory && creditTxs.length > 0) {
       await prisma.transaction.updateMany({
-        where: { id: { in: creditTxs.map(t => t.id) } },
+        where: { id: { in: creditTxs.map((t: { id: string; description: string; amount: number }) => t.id) } },
         data: { categoryId: incomeCategory.id, categoryConfidence: 1, classifiedBy: 'claude' },
       })
     }
@@ -106,10 +106,12 @@ export async function batchClassify(batchId: string, userId: string): Promise<vo
       uniqueDescMap.set(tx.description, existing)
     }
 
+    type TxLite = { id: string; description: string; amount: number }
+
     const uniqueTransactions = Array.from(uniqueDescMap.entries()).map(([desc, ids]) => ({
       id: ids[0], // Use first ID for classification
       description: desc,
-      amount: debitTxs.find(t => t.id === ids[0])!.amount,
+      amount: debitTxs.find((t: TxLite) => t.id === ids[0])!.amount,
       allIds: ids,
     }))
 
@@ -130,7 +132,11 @@ export async function batchClassify(batchId: string, userId: string): Promise<vo
           const results = await classifyBatch(
             userId,
             categories,
-            chunk.map(t => ({ id: t.id, description: t.description, amount: t.amount })),
+            chunk.map((t: TxLite) => ({
+              id: t.id,
+              description: t.description,
+              amount: t.amount,
+            })),
             fallbackCategory.id
           )
 

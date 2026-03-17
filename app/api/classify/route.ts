@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
 
   // Point the transactions at this batch
   await prisma.transaction.updateMany({
-    where: { id: { in: transactions.map(t => t.id) } },
+    where: { id: { in: transactions.map((t: { id: string }) => t.id) } },
     data: { uploadBatchId: batchId },
   })
 

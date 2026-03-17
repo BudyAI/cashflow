@@ -22,14 +22,14 @@ export async function buildClassificationPrompt(
     history.length > 0
       ? `\nPrevious user corrections (learn from these):\n${history
           .map(
-            h =>
+            (h: { descriptionOriginal: string; amount: number; correctedCategoryName: string }) =>
               `- "${h.descriptionOriginal}" (${h.amount > 0 ? '+' : ''}${h.amount}) → ${h.correctedCategoryName}`
           )
           .join('\n')}`
       : ''
 
   const transactionList = transactions
-    .map(t => `{"id":"${t.id}","desc":"${t.description}","amount":${t.amount}}`)
+    .map((t: { id: string; description: string; amount: number }) => `{"id":"${t.id}","desc":"${t.description}","amount":${t.amount}}`)
     .join('\n')
 
   const categoryIds = categories.map(c => c.id).join(', ')
@@ -52,7 +52,11 @@ ${transactionList}`
   // Update usage counts for history items used
   if (history.length > 0) {
     await prisma.classificationHistory.updateMany({
-      where: { id: { in: history.map(h => h.id) } },
+      where: {
+        id: {
+          in: history.map((h: { id: string }) => h.id),
+        },
+      },
       data: { usedInPromptCount: { increment: 1 } },
     })
   }

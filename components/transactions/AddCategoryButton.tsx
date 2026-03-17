@@ -82,7 +82,7 @@ export function AddCategoryButton() {
               />
 
               <div className="flex gap-2">
-                {(['expense', 'income'] as const).map(t => (
+                {(['expense', 'income'] as const).map((t: 'expense' | 'income') => (
                   <button
                     key={t}
                     type="button"

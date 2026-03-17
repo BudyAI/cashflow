@@ -40,12 +40,12 @@ function normalizeColumnName(name: string): string {
 
 function findColumn(headers: string[], candidates: string[]): number {
   for (const candidate of candidates) {
-    const idx = headers.findIndex(h => normalizeColumnName(h) === candidate)
+    const idx = headers.findIndex((h: string) => normalizeColumnName(h) === candidate)
     if (idx !== -1) return idx
   }
   // Partial match fallback
   for (const candidate of candidates) {
-    const idx = headers.findIndex(h => normalizeColumnName(h).includes(candidate))
+    const idx = headers.findIndex((h: string) => normalizeColumnName(h).includes(candidate))
     if (idx !== -1) return idx
   }
   return -1
@@ -129,8 +129,8 @@ export function findHeaderRowIndex(rows: string[][]): number {
   for (let i = 0; i < Math.min(rows.length, 10); i++) {
     const normalized = rows[i].map(normalizeColumnName)
     if (
-      normalized.some(h => h === 'date' || h.includes('date')) &&
-      normalized.some(h => h === 'debit' || h === 'credit' || h === 'amount' || h.includes('amount'))
+      normalized.some((h: string) => h === 'date' || h.includes('date')) &&
+      normalized.some((h: string) => h === 'debit' || h === 'credit' || h === 'amount' || h.includes('amount'))
     ) {
       return i
     }
@@ -148,11 +148,11 @@ function suggestMapping(headers: string[]): FilePreview['suggestedMapping'] {
 
   function suggestCol(candidates: string[]): string | null {
     for (const c of candidates) {
-      const idx = normalized.findIndex(h => h === c)
+      const idx = normalized.findIndex((h: string) => h === c)
       if (idx !== -1) return headers[idx]
     }
     for (const c of candidates) {
-      const idx = normalized.findIndex(h => h.includes(c))
+      const idx = normalized.findIndex((h: string) => h.includes(c))
       if (idx !== -1) return headers[idx]
     }
     return null
@@ -292,8 +292,8 @@ function parseRows(rows: string[][]): ParseResult {
   for (let i = 0; i < Math.min(rows.length, 10); i++) {
     const normalized = rows[i].map(normalizeColumnName)
     if (
-      normalized.some(h => h === 'date' || h.includes('date')) &&
-      normalized.some(h => h === 'debit' || h === 'credit' || h === 'amount' || h.includes('amount'))
+      normalized.some((h: string) => h === 'date' || h.includes('date')) &&
+      normalized.some((h: string) => h === 'debit' || h === 'credit' || h === 'amount' || h.includes('amount'))
     ) {
       headerRowIdx = i
       break

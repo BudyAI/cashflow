@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     })
 
     await prisma.transaction.createMany({
-      data: parsed.map(t => ({
+      data: parsed.map((t: typeof parsed[number]) => ({
         id: nanoid(),
         userId,
         uploadBatchId: batch.id,
