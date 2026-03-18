@@ -34,7 +34,7 @@ export function ClassifyProgress({ status, progress }: ClassifyProgressProps) {
       <div className="flex items-center justify-between text-sm">
         <div className="flex items-center gap-2 text-slate-600">
           <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
-          Classifying transactions with AI...
+          Categorizing transactions...
         </div>
         <span className="text-slate-500">
           {status.processedRows} / {status.totalRows}

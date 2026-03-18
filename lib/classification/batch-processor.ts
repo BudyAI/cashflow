@@ -1,9 +1,6 @@
-import Anthropic from '@anthropic-ai/sdk'
 import { prisma } from '@/lib/prisma'
-import { buildClassificationPrompt } from './prompt-builder'
 import type { CategoryItem, ClassificationResult } from '@/types'
-
-const anthropic = new Anthropic()
+import { keywordClassifyBatch } from './keyword-classifier'
 
 function normalizeDescriptionForDedupe(input: string): string {
   return input
@@ -13,104 +10,22 @@ function normalizeDescriptionForDedupe(input: string): string {
     .toLowerCase()
 }
 
-type AnthropicModelInfo = { id: string; display_name?: string }
+async function ensureTransfersCategory(userId: string, categories: CategoryItem[]): Promise<CategoryItem[]> {
+  const hasTransfers = categories.some(c => c.name.toLowerCase() === 'transfers')
+  if (hasTransfers) return categories
 
-let resolvedAnthropicModel: string | null = null
-async function resolveAnthropicModel(): Promise<string> {
-  const fromEnv = process.env.ANTHROPIC_MODEL?.trim()
-  if (fromEnv) return fromEnv
-  if (resolvedAnthropicModel) return resolvedAnthropicModel
+  const created = await prisma.category.create({
+    data: {
+      userId: null,
+      name: 'Transfers',
+      type: 'expense',
+      color: '#a3a3a3',
+      isDefault: true,
+      sortOrder: 5,
+    },
+  })
 
-  // Fall back to asking Anthropic what models are available for this key.
-  // The docs recommend using GET /v1/models to determine availability.
-  const list = await anthropic.models.list({ limit: 100 })
-  const models = (list.data ?? []) as unknown as AnthropicModelInfo[]
-
-  const pick =
-    models.find(m => (m.display_name ?? '').toLowerCase().includes('sonnet')) ??
-    models.find(m => (m.id ?? '').toLowerCase().includes('sonnet')) ??
-    models[0]
-
-  if (!pick?.id) throw new Error('No Anthropic models available for this API key')
-  resolvedAnthropicModel = pick.id
-  return pick.id
-}
-
-function createLimit(concurrency: number) {
-  let active = 0
-  const queue: Array<() => void> = []
-
-  function next() {
-    if (active >= concurrency || queue.length === 0) return
-    active++
-    const fn = queue.shift()!
-    fn()
-  }
-
-  return function limit<T>(fn: () => Promise<T>): Promise<T> {
-    return new Promise((resolve, reject) => {
-      queue.push(() => {
-        fn()
-          .then(resolve, reject)
-          .finally(() => {
-            active--
-            next()
-          })
-      })
-      next()
-    })
-  }
-}
-
-async function classifyBatch(
-  userId: string,
-  categories: CategoryItem[],
-  transactions: Array<{ id: string; description: string }>,
-  fallbackCategoryId: string
-): Promise<ClassificationResult[]> {
-  const prompt = await buildClassificationPrompt(userId, categories, transactions)
-
-  let message: Awaited<ReturnType<typeof anthropic.messages.create>>
-  let modelId: string
-  try {
-    modelId = await resolveAnthropicModel()
-  } catch (err) {
-    throw err
-  }
-
-  try {
-    message = await anthropic.messages.create({
-      model: modelId,
-      max_tokens: 4096,
-      messages: [{ role: 'user', content: prompt }],
-    })
-  } catch (err) {
-    throw err
-  }
-
-  const content = message.content[0]
-  if (content.type !== 'text') throw new Error('Unexpected response type')
-
-  // Extract JSON array from response
-  const jsonMatch = content.text.match(/\[[\s\S]*\]/)
-  if (!jsonMatch) throw new Error('No JSON array in response')
-
-  let results: ClassificationResult[]
-  try {
-    results = JSON.parse(jsonMatch[0]) as ClassificationResult[]
-  } catch (err) {
-    throw err
-  }
-
-  // Validate each result has required fields
-  const validCategoryIds = new Set(categories.map(c => c.id))
-  const normalized = results.map(r => ({
-    id: r.id,
-    categoryId: validCategoryIds.has(r.categoryId) ? r.categoryId : fallbackCategoryId,
-    confidence: typeof r.confidence === 'number' ? Math.max(0, Math.min(1, r.confidence)) : 0.5,
-  }))
-
-  return normalized
+  return [...categories, created as unknown as CategoryItem]
 }
 
 export async function batchClassify(batchId: string, userId: string): Promise<void> {
@@ -126,6 +41,8 @@ export async function batchClassify(batchId: string, userId: string): Promise<vo
       where: { OR: [{ userId }, { userId: null }] },
       orderBy: { sortOrder: 'asc' },
     }) as unknown as CategoryItem[]
+
+    const categoriesWithTransfers = await ensureTransfersCategory(userId, categories)
 
     const fallbackCategory = categories.find(c => c.name === 'Other Expenses') ?? categories[categories.length - 1]
     const incomeCategory = categories.find(c => c.name === 'Income')
@@ -144,7 +61,7 @@ export async function batchClassify(batchId: string, userId: string): Promise<vo
     if (incomeCategory && creditTxs.length > 0) {
       await prisma.transaction.updateMany({
         where: { id: { in: creditTxs.map((t: { id: string; description: string; amount: number }) => t.id) } },
-        data: { categoryId: incomeCategory.id, categoryConfidence: 1, classifiedBy: 'claude' },
+        data: { categoryId: incomeCategory.id, categoryConfidence: 1, classifiedBy: 'rules' },
       })
     }
 
@@ -178,51 +95,40 @@ export async function batchClassify(batchId: string, userId: string): Promise<vo
         chunks.push(uniqueTransactions.slice(i, i + chunkSize))
       }
 
-      // Process with createLimit(5) concurrent calls
-      const limit = createLimit(5)
       let processedCount = creditTxs.length
 
-      const tasks = chunks.map(chunk =>
-        limit(async () => {
-          const results = await classifyBatch(
-            userId,
-            categories,
-            chunk.map((t: TxLite) => ({
-              id: t.id,
-              description: t.description,
-            })),
-            fallbackCategory.id
+      for (const chunk of chunks) {
+        const results: ClassificationResult[] = keywordClassifyBatch(
+          categoriesWithTransfers,
+          chunk.map((t: TxLite) => ({ id: t.id, description: t.description }))
+        )
+
+        // Fan results back to all transactions sharing description
+        const updates: Promise<unknown>[] = []
+        for (const result of results) {
+          const original = chunk.find(t => t.id === result.id)
+          if (!original) continue
+
+          updates.push(
+            prisma.transaction.updateMany({
+              where: { id: { in: original.allIds } },
+              data: {
+                categoryId: result.categoryId,
+                categoryConfidence: result.confidence,
+                classifiedBy: 'rules',
+              },
+            })
           )
+          processedCount += original.allIds.length
+        }
 
-          // Fan results back to all transactions sharing description
-          const updates: Promise<unknown>[] = []
-          for (const result of results) {
-            const original = chunk.find(t => t.id === result.id)
-            if (!original) continue
+        await Promise.all(updates)
 
-            updates.push(
-              prisma.transaction.updateMany({
-                where: { id: { in: original.allIds } },
-                data: {
-                  categoryId: result.categoryId,
-                  categoryConfidence: result.confidence,
-                  classifiedBy: 'claude',
-                },
-              })
-            )
-            processedCount += original.allIds.length
-          }
-
-          await Promise.all(updates)
-
-          await prisma.uploadBatch.update({
-            where: { id: batchId },
-            data: { processedRows: processedCount },
-          })
+        await prisma.uploadBatch.update({
+          where: { id: batchId },
+          data: { processedRows: processedCount },
         })
-      )
-
-      await Promise.all(tasks)
+      }
     }
 
     await prisma.uploadBatch.update({

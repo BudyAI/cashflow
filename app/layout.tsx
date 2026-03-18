@@ -7,7 +7,7 @@ const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'Cashflow Manager',
-  description: 'AI-powered cashflow management for accountants',
+  description: 'Cashflow management for accountants',
 }
 
 export default function RootLayout({

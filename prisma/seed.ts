@@ -20,6 +20,7 @@ const GENERAL_CATEGORIES = [
   { name: 'Subcontractors', type: 'expense', color: '#f97316', sortOrder: 3 },
   { name: 'SaaS Services', type: 'expense', color: '#8b5cf6', sortOrder: 4 },
   { name: 'Credit Card', type: 'expense', color: '#ec4899', sortOrder: 5 },
+  { name: 'Transfers', type: 'expense', color: '#a3a3a3', sortOrder: 5 },
   { name: 'Interest / Bank Fees', type: 'expense', color: '#06b6d4', sortOrder: 6 },
   { name: 'Food & Dining', type: 'expense', color: '#eab308', sortOrder: 7 },
   { name: 'Transport', type: 'expense', color: '#0ea5e9', sortOrder: 8 },

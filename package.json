@@ -17,7 +17,6 @@
     "seed": "node prisma/seed.mjs"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.78.0",
     "@auth/prisma-adapter": "^2.11.1",
     "@prisma/adapter-better-sqlite3": "^7.5.0",
     "@prisma/adapter-pg": "^7.5.0",

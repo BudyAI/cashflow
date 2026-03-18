@@ -10,7 +10,7 @@ export default async function LoginPage() {
       <div className="bg-white rounded-2xl shadow-lg p-10 w-full max-w-md text-center space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Cashflow Manager</h1>
-          <p className="text-slate-500 mt-2">AI-powered financial tracking for accountants</p>
+          <p className="text-slate-500 mt-2">Financial tracking for accountants</p>
         </div>
         <div className="border-t border-slate-100 pt-6">
           <form

@@ -74,7 +74,6 @@ export function AgingDebtChart() {
 
       {chartData.length === 0 ? (
         <div className="h-64 flex flex-col items-center justify-center text-slate-400 text-sm gap-2">
-          <Upload className="w-8 h-8 opacity-40" />
           <span>Upload an aging report on the Transactions page to see your debt breakdown</span>
         </div>
       ) : (
