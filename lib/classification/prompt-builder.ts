@@ -4,7 +4,7 @@ import type { CategoryItem } from '@/types'
 export async function buildClassificationPrompt(
   userId: string,
   categories: CategoryItem[],
-  transactions: Array<{ id: string; description: string; amount: number }>
+  transactions: Array<{ id: string; description: string }>
 ): Promise<string> {
   // Fetch recent corrections for few-shot examples
   const history = await prisma.classificationHistory.findMany({
@@ -14,13 +14,11 @@ export async function buildClassificationPrompt(
     distinct: ['descriptionNormalized'],
   })
 
-  const categoryList = categories
-    .map(c => `- ${c.id}: ${c.name} (${c.type})`)
-    .join('\n')
+  const categoriesPayload = categories.map(c => ({ id: c.id, name: c.name, type: c.type }))
 
   const fewShotExamples =
     history.length > 0
-      ? `\nPrevious user corrections (learn from these):\n${history
+      ? `\n\nNotes for learning (previous user corrections):\n${history
           .map(
             (h: { descriptionOriginal: string; amount: number; correctedCategoryName: string }) =>
               `- "${h.descriptionOriginal}" (${h.amount > 0 ? '+' : ''}${h.amount}) → ${h.correctedCategoryName}`
@@ -28,26 +26,27 @@ export async function buildClassificationPrompt(
           .join('\n')}`
       : ''
 
-  const transactionList = transactions
-    .map((t: { id: string; description: string; amount: number }) => `{"id":"${t.id}","desc":"${t.description}","amount":${t.amount}}`)
-    .join('\n')
-
-  const categoryIds = categories.map(c => c.id).join(', ')
+  const inputPayload = {
+    categories: categoriesPayload,
+    transactions,
+  }
 
   const prompt = `You are a financial transaction classifier for an accounting application.
+Descriptions may be in Hebrew, English, or mixed. Do not translate them; classify based on meaning and context.
+You will receive ONE JSON object containing:
+- categories: array of {id, name, type}
+- transactions: array of {id, description}
 
-Available categories:
-${categoryList}
-${fewShotExamples}
+Rules:
+- Return ONLY a valid JSON array (no prose, no markdown, no code fences).
+- Output must be one item per input transaction id.
+- categoryId MUST be one of the provided category ids.
 
-Classify each transaction below into one of the category IDs listed above.
-Return ONLY a valid JSON array, no other text:
+Output schema:
 [{"id":"<transactionId>","categoryId":"<categoryId>","confidence":<0.0-1.0>}, ...]
 
-Valid categoryIds: ${categoryIds}
-
-Transactions to classify:
-${transactionList}`
+Input JSON:
+${JSON.stringify(inputPayload)}${fewShotExamples}`
 
   // Update usage counts for history items used
   if (history.length > 0) {

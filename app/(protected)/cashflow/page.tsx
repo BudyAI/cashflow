@@ -3,6 +3,7 @@ import { SummaryCards } from '@/components/cashflow/SummaryCards'
 import { MonthlyBarChart } from '@/components/cashflow/MonthlyBarChart'
 import { RunningTotalChart } from '@/components/cashflow/RunningTotalChart'
 import { MonthlyBurnChart } from '@/components/cashflow/MonthlyBurnChart'
+import { AgingDebtChart } from '@/components/cashflow/AgingDebtChart'
 import { DateRangeFilter } from '@/components/cashflow/DateRangeFilter'
 import { CashflowTable } from '@/components/cashflow/CashflowTable'
 
@@ -20,6 +21,7 @@ export default function CashflowPage() {
           <MonthlyBarChart />
           <RunningTotalChart />
           <MonthlyBurnChart />
+          <AgingDebtChart />
         </div>
         <CashflowTable />
       </CashflowProvider>

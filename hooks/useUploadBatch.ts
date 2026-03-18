@@ -80,6 +80,9 @@ export function useUploadBatch() {
     const data = await res.json()
     setBatchId(data.batchId)
     setStatus({ id: data.batchId, status: 'processing', totalRows: data.totalRows, processedRows: 0, errors: [] })
+
+    // Move UI back to idle; progress continues via polling status.
+    setStep('idle')
   }
 
   function reset() {

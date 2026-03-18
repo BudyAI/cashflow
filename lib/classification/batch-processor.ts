@@ -5,6 +5,37 @@ import type { CategoryItem, ClassificationResult } from '@/types'
 
 const anthropic = new Anthropic()
 
+function normalizeDescriptionForDedupe(input: string): string {
+  return input
+    .normalize('NFKC')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toLowerCase()
+}
+
+type AnthropicModelInfo = { id: string; display_name?: string }
+
+let resolvedAnthropicModel: string | null = null
+async function resolveAnthropicModel(): Promise<string> {
+  const fromEnv = process.env.ANTHROPIC_MODEL?.trim()
+  if (fromEnv) return fromEnv
+  if (resolvedAnthropicModel) return resolvedAnthropicModel
+
+  // Fall back to asking Anthropic what models are available for this key.
+  // The docs recommend using GET /v1/models to determine availability.
+  const list = await anthropic.models.list({ limit: 100 })
+  const models = (list.data ?? []) as unknown as AnthropicModelInfo[]
+
+  const pick =
+    models.find(m => (m.display_name ?? '').toLowerCase().includes('sonnet')) ??
+    models.find(m => (m.id ?? '').toLowerCase().includes('sonnet')) ??
+    models[0]
+
+  if (!pick?.id) throw new Error('No Anthropic models available for this API key')
+  resolvedAnthropicModel = pick.id
+  return pick.id
+}
+
 function createLimit(concurrency: number) {
   let active = 0
   const queue: Array<() => void> = []
@@ -34,16 +65,28 @@ function createLimit(concurrency: number) {
 async function classifyBatch(
   userId: string,
   categories: CategoryItem[],
-  transactions: Array<{ id: string; description: string; amount: number }>,
+  transactions: Array<{ id: string; description: string }>,
   fallbackCategoryId: string
 ): Promise<ClassificationResult[]> {
   const prompt = await buildClassificationPrompt(userId, categories, transactions)
 
-  const message = await anthropic.messages.create({
-    model: 'claude-3-5-sonnet-20241022',
-    max_tokens: 4096,
-    messages: [{ role: 'user', content: prompt }],
-  })
+  let message: Awaited<ReturnType<typeof anthropic.messages.create>>
+  let modelId: string
+  try {
+    modelId = await resolveAnthropicModel()
+  } catch (err) {
+    throw err
+  }
+
+  try {
+    message = await anthropic.messages.create({
+      model: modelId,
+      max_tokens: 4096,
+      messages: [{ role: 'user', content: prompt }],
+    })
+  } catch (err) {
+    throw err
+  }
 
   const content = message.content[0]
   if (content.type !== 'text') throw new Error('Unexpected response type')
@@ -52,15 +95,22 @@ async function classifyBatch(
   const jsonMatch = content.text.match(/\[[\s\S]*\]/)
   if (!jsonMatch) throw new Error('No JSON array in response')
 
-  const results = JSON.parse(jsonMatch[0]) as ClassificationResult[]
+  let results: ClassificationResult[]
+  try {
+    results = JSON.parse(jsonMatch[0]) as ClassificationResult[]
+  } catch (err) {
+    throw err
+  }
 
   // Validate each result has required fields
   const validCategoryIds = new Set(categories.map(c => c.id))
-  return results.map(r => ({
+  const normalized = results.map(r => ({
     id: r.id,
     categoryId: validCategoryIds.has(r.categoryId) ? r.categoryId : fallbackCategoryId,
     confidence: typeof r.confidence === 'number' ? Math.max(0, Math.min(1, r.confidence)) : 0.5,
   }))
+
+  return normalized
 }
 
 export async function batchClassify(batchId: string, userId: string): Promise<void> {
@@ -68,7 +118,7 @@ export async function batchClassify(batchId: string, userId: string): Promise<vo
     // Get all transactions for this batch
     const transactions = await prisma.transaction.findMany({
       where: { uploadBatchId: batchId, userId },
-      select: { id: true, description: true, amount: true },
+      select: { id: true, description: true, originalDescription: true, amount: true },
     })
 
     // Get user's categories + system defaults
@@ -99,18 +149,23 @@ export async function batchClassify(batchId: string, userId: string): Promise<vo
     }
 
     // Deduplicate debits by description for AI classification
-    const uniqueDescMap = new Map<string, string[]>() // description -> [ids]
+    const uniqueDescMap = new Map<string, string[]>() // normalized description -> [ids]
+    const idToPromptDesc = new Map<string, string>() // id -> original (preferred) description for prompt
     for (const tx of debitTxs) {
-      const existing = uniqueDescMap.get(tx.description) ?? []
+      const promptDesc = tx.originalDescription?.trim() ? tx.originalDescription : tx.description
+      idToPromptDesc.set(tx.id, promptDesc)
+
+      const key = normalizeDescriptionForDedupe(promptDesc)
+      const existing = uniqueDescMap.get(key) ?? []
       existing.push(tx.id)
-      uniqueDescMap.set(tx.description, existing)
+      uniqueDescMap.set(key, existing)
     }
 
     type TxLite = { id: string; description: string; amount: number }
 
     const uniqueTransactions = Array.from(uniqueDescMap.entries()).map(([desc, ids]) => ({
       id: ids[0], // Use first ID for classification
-      description: desc,
+      description: idToPromptDesc.get(ids[0]) ?? desc,
       amount: debitTxs.find((t: TxLite) => t.id === ids[0])!.amount,
       allIds: ids,
     }))
@@ -135,7 +190,6 @@ export async function batchClassify(batchId: string, userId: string): Promise<vo
             chunk.map((t: TxLite) => ({
               id: t.id,
               description: t.description,
-              amount: t.amount,
             })),
             fallbackCategory.id
           )
