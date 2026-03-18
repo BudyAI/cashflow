@@ -10,7 +10,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts'
-import { Upload, Trash2 } from 'lucide-react'
+import { Trash2 } from 'lucide-react'
 import { useCashflowContext, formatK } from './CashflowContext'
 
 interface AgingReport {
