@@ -1,6 +1,8 @@
 import { defineConfig } from "prisma/config";
 
-const dbProvider = process.env["DB_PROVIDER"] ?? "sqlite";
+const dbProvider =
+  process.env["DB_PROVIDER"] ??
+  (process.env["NODE_ENV"] === "production" ? "postgresql" : "sqlite");
 const fallbackDatabaseUrl =
   dbProvider === "postgresql"
     ? "postgresql://localhost:5432/cashflow"

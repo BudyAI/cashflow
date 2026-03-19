@@ -6,21 +6,16 @@ function getDbProvider() {
   return process.env.NODE_ENV === 'production' ? 'postgresql' : 'sqlite'
 }
 
-function runCommand(command, args) {
+function run(command, args) {
   const result = spawnSync(command, args, { stdio: 'inherit', env: process.env })
   if (result.status !== 0) {
     process.exit(result.status ?? 1)
   }
 }
 
-function main() {
-  const provider = getDbProvider()
-  if (provider !== 'sqlite') {
-    return
-  }
-
-  // Keep local SQLite schema in sync automatically for first run.
-  runCommand('pnpm', ['prisma', 'db', 'push'])
+const provider = getDbProvider()
+if (provider === 'postgresql') {
+  run('node', ['scripts/run-prisma-postgres.mjs', 'generate'])
+} else {
+  run('pnpm', ['prisma', 'generate'])
 }
-
-main()

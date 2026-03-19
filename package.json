@@ -10,10 +10,10 @@
     "start": "next start",
     "lint": "next lint",
     "seed": "node prisma/seed.mjs",
-    "prisma:generate": "prisma generate",
+    "prisma:generate": "node scripts/prisma-generate-by-env.mjs",
     "db:local:sync": "prisma db push",
     "db:migrate:dev": "node scripts/run-prisma-postgres.mjs migrate dev",
-    "postinstall": "prisma generate",
+    "postinstall": "node scripts/prisma-generate-by-env.mjs",
     "migrate:deploy": "node scripts/run-prisma-postgres.mjs migrate deploy"
   },
   "prisma": {

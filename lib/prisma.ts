@@ -7,7 +7,9 @@ const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient }
 type DbProvider = 'sqlite' | 'postgresql'
 
 function getDbProvider(): DbProvider {
-  return process.env.DB_PROVIDER === 'postgresql' ? 'postgresql' : 'sqlite'
+  if (process.env.DB_PROVIDER === 'postgresql') return 'postgresql'
+  if (process.env.DB_PROVIDER === 'sqlite') return 'sqlite'
+  return process.env.NODE_ENV === 'production' ? 'postgresql' : 'sqlite'
 }
 
 function getConnectionString(provider: DbProvider): string {
