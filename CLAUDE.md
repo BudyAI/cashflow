@@ -15,3 +15,32 @@
 3. `git log -1` looks correct.
 4. Push: `git push -u origin HEAD` (first time) or `git push`.
 
+## Database workflow (Prisma)
+
+- Default provider is SQLite for local development (`DB_PROVIDER=sqlite`).
+- `DATABASE_URL` must match provider:
+  - SQLite: `file:./dev.db`
+  - Postgres: `postgresql://...`
+- First local run is automatic:
+  - `pnpm dev` runs `scripts/ensure-local-db.mjs`
+  - this auto-syncs SQLite schema via `prisma db push`
+- Safe command usage:
+  - Local SQLite sync: `pnpm db:local:sync`
+  - Local seed: `pnpm seed`
+  - Postgres migration authoring: `pnpm db:migrate:dev` (requires Postgres `DATABASE_URL`)
+  - Production migration deploy: `pnpm migrate:deploy` (requires Postgres `DATABASE_URL`)
+- Migration source of truth is Postgres migrations in `prisma/migrations`; do not treat SQLite `db push` as canonical migration history.
+- Postgres migration scripts are executed via `scripts/run-prisma-postgres.mjs`, which generates a temporary Postgres schema from `prisma/schema.prisma`.
+
+## Local auth bypass (dev only)
+
+- Set `DEV_AUTH_BYPASS=true` to bypass Google OAuth in local development.
+- To disable local bypass, remove `DEV_AUTH_BYPASS` or set `DEV_AUTH_BYPASS=false` in `.env`, then restart `pnpm dev`.
+- Bypass mode is guarded to non-production environments only.
+- Login uses a credentials provider and auto-upserts a deterministic dev user:
+  - id: `dev-user`
+  - email: `dev@test.com`
+  - name: `Dev User`
+- This keeps local sign-in simple and ensures DB-backed user queries still work on first run.
+- Keep `DEV_AUTH_BYPASS` disabled outside local development.
+

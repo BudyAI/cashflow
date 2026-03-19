@@ -4,14 +4,17 @@
   "private": true,
   "packageManager": "pnpm@10.32.1",
   "scripts": {
+    "predev": "node scripts/ensure-local-db.mjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "seed": "node prisma/seed.mjs",
     "prisma:generate": "prisma generate",
+    "db:local:sync": "prisma db push",
+    "db:migrate:dev": "node scripts/run-prisma-postgres.mjs migrate dev",
     "postinstall": "prisma generate",
-    "migrate:deploy": "prisma migrate deploy"
+    "migrate:deploy": "node scripts/run-prisma-postgres.mjs migrate deploy"
   },
   "prisma": {
     "seed": "node prisma/seed.mjs"

@@ -1,13 +1,30 @@
 import { PrismaClient } from '@prisma/client'
+import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3'
 import { PrismaPg } from '@prisma/adapter-pg'
 import crypto from 'crypto'
 
-function getPrisma() {
-  const connectionString = process.env.DATABASE_URL
-  if (!connectionString) {
-    throw new Error('DATABASE_URL is not set. Set it in .env to run the seed.')
+function getDbProvider() {
+  return process.env.DB_PROVIDER === 'postgresql' ? 'postgresql' : 'sqlite'
+}
+
+function getConnectionString(provider) {
+  if (process.env.DATABASE_URL) return process.env.DATABASE_URL
+  return provider === 'postgresql'
+    ? 'postgresql://localhost:5432/cashflow'
+    : 'file:./dev.db'
+}
+
+function createAdapter(connectionString, provider) {
+  if (provider === 'postgresql') {
+    return new PrismaPg({ connectionString })
   }
-  const adapter = new PrismaPg({ connectionString })
+  return new PrismaBetterSqlite3({ url: connectionString })
+}
+
+function getPrisma() {
+  const provider = getDbProvider()
+  const connectionString = getConnectionString(provider)
+  const adapter = createAdapter(connectionString, provider)
   return new PrismaClient({ adapter })
 }
 
