@@ -9,9 +9,11 @@ This repo uses **pnpm** (see `packageManager` in `package.json`).
 Create your local env file and install dependencies:
 
 ```bash
-cp .env.example .env
+pnpm env:create
 pnpm install
 ```
+
+`pnpm env:create` copies `.env.example` to `.env` (if missing) and sets `NEXTAUTH_SECRET` to a random value. If you prefer to edit by hand, you can `cp .env.example .env` and set `NEXTAUTH_SECRET` (for example with `openssl rand -base64 32`).
 
 ### Database workflow
 

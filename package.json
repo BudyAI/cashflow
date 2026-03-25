@@ -14,7 +14,8 @@
     "db:local:sync": "prisma db push",
     "db:migrate:dev": "node scripts/run-prisma-postgres.mjs migrate dev",
     "postinstall": "node scripts/prisma-generate-by-env.mjs",
-    "migrate:deploy": "node scripts/run-prisma-postgres.mjs migrate deploy"
+    "migrate:deploy": "node scripts/run-prisma-postgres.mjs migrate deploy",
+    "env:create": "node scripts/create-env.mjs"
   },
   "prisma": {
     "seed": "node prisma/seed.mjs"
