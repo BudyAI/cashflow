@@ -1,3 +1,9 @@
+## Environment setup
+
+- **First-time local env:** run `pnpm env:create` to create `.env` from `.env.example` and set `NEXTAUTH_SECRET` to a random value (32-byte base64).
+- If `.env` already exists but `NEXTAUTH_SECRET` is missing or still the placeholder from `.env.example`, `pnpm env:create` fills or updates it; if a real secret is already set, the script leaves it unchanged.
+- Alternatively, copy `.env.example` to `.env` manually and set `NEXTAUTH_SECRET` yourself (for example `openssl rand -base64 32`).
+
 ## Git workflow rules
 
 - **Never push to `main` or `master`.**

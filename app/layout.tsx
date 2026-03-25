@@ -8,6 +8,9 @@ const inter = Inter({ subsets: ['latin'] })
 export const metadata: Metadata = {
   title: 'Cashflow Manager',
   description: 'Cashflow management for accountants',
+  icons: {
+    icon: '/logo-icon.png',
+  },
 }
 
 export default function RootLayout({
