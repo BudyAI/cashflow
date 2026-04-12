@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx'
 import type { ParsedTransaction, ParseResult, ColumnMapping, FilePreview } from '@/types'
+import { normalizeCurrency } from '@/lib/currency'
 
 function parseDate(raw: string): Date | null {
   // Handle D/M/YY, D/M/YYYY, DD/MM/YY, DD/MM/YYYY (Israeli/European format)
@@ -164,6 +165,7 @@ function suggestMapping(headers: string[]): FilePreview['suggestedMapping'] {
   const debitCol = suggestCol(['debit', 'debitamount', 'withdrawal', 'dr'])
   const creditCol = suggestCol(['credit', 'creditamount', 'deposit', 'cr'])
   const balanceCol = suggestCol(['balance', 'runningbalance', 'accountbalance', 'closingbalance'])
+  const currencyCol = suggestCol(['currency', 'curr', 'ccy', 'currencycode', 'fx'])
 
   const hasDebitCredit = debitCol !== null && creditCol !== null
 
@@ -175,6 +177,7 @@ function suggestMapping(headers: string[]): FilePreview['suggestedMapping'] {
     debit: debitCol,
     credit: creditCol,
     balance: balanceCol,
+    currency: currencyCol,
   }
 }
 
@@ -225,6 +228,10 @@ export function parseExcelWithMapping(buffer: Buffer, mapping: ColumnMapping): P
   const debitIdx = mapping.amountMode === 'debitcredit' ? getIdx(mapping.debit) : -1
   const creditIdx = mapping.amountMode === 'debitcredit' ? getIdx(mapping.credit) : -1
   const balanceIdx = getIdx(mapping.balance)
+  const currencyIdx = mapping.currency ? getIdx(mapping.currency) : -1
+  if (mapping.currency && currencyIdx === -1) {
+    return { transactions: [], errors: [`Currency column "${mapping.currency}" not found`] }
+  }
 
   if (dateIdx === -1) return { transactions: [], errors: [`Date column "${mapping.date}" not found`] }
   if (descIdx === -1) return { transactions: [], errors: [`Description column "${mapping.description}" not found`] }
@@ -271,11 +278,15 @@ export function parseExcelWithMapping(buffer: Buffer, mapping: ColumnMapping): P
 
       const balance = balanceIdx !== -1 ? (parseAmount(row[balanceIdx]) ?? null) : null
 
+      const rowCurrency =
+        currencyIdx !== -1 ? normalizeCurrency(row[currencyIdx] ?? '') : 'USD'
+
       transactions.push({
         date,
         description: description.toLowerCase().replace(/\s+/g, ' '),
         originalDescription: description,
         amount,
+        currency: rowCurrency,
         balance,
       })
     } catch (err) {
@@ -319,6 +330,7 @@ function parseRows(rows: string[][]): ParseResult {
   const debitIdx = findColumn(headers, ['debit', 'debitamount', 'withdrawal', 'dr'])
   const creditIdx = findColumn(headers, ['credit', 'creditamount', 'deposit', 'cr'])
   const balanceIdx = findColumn(headers, ['balance', 'runningbalance', 'accountbalance', 'closingbalance'])
+  const currencyIdx = findColumn(headers, ['currency', 'curr', 'ccy', 'currencycode'])
   if (dateIdx === -1) {
     return { transactions: [], errors: [`Could not find date column. Headers: ${headerRow.join(', ')}`] }
   }
@@ -368,11 +380,15 @@ function parseRows(rows: string[][]): ParseResult {
 
       const balance = balanceIdx !== -1 ? (parseAmount(row[balanceIdx]) ?? null) : null
 
+      const rowCurrency =
+        currencyIdx !== -1 ? normalizeCurrency(row[currencyIdx] ?? '') : 'USD'
+
       transactions.push({
         date,
         description: description.toLowerCase().replace(/\s+/g, ' '),
         originalDescription: description,
         amount,
+        currency: rowCurrency,
         balance,
       })
     } catch (err) {

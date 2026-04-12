@@ -67,6 +67,7 @@ export async function POST(request: NextRequest) {
         description: t.description,
         originalDescription: t.originalDescription,
         amount: t.amount,
+        currency: t.currency,
         balance: t.balance ?? null,
         classifiedBy: 'pending',
       })),

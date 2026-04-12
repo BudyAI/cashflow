@@ -1,11 +1,9 @@
 'use client'
 import useSWR from 'swr'
 import { useState } from 'react'
-import type { CashflowSummary } from '@/types'
+import type { CashflowSummary, Currency } from '@/types'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
-
-export type Currency = 'USD' | 'ILS'
 
 export function useCashflow() {
   const [dateFrom, setDateFrom] = useState<string>('')
@@ -15,6 +13,7 @@ export function useCashflow() {
   const params = new URLSearchParams()
   if (dateFrom) params.set('dateFrom', dateFrom)
   if (dateTo) params.set('dateTo', dateTo)
+  params.set('currency', currency)
 
   const { data, error, isLoading } = useSWR<CashflowSummary>(
     `/api/cashflow?${params.toString()}`,

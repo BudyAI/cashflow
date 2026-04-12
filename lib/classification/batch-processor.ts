@@ -10,7 +10,27 @@ function normalizeDescriptionForDedupe(input: string): string {
     .toLowerCase()
 }
 
-async function ensureTransfersCategory(userId: string, categories: CategoryItem[]): Promise<CategoryItem[]> {
+async function ensureGeneralCategory(
+  categories: CategoryItem[],
+  spec: { name: string; type: string; color: string; sortOrder: number }
+): Promise<CategoryItem[]> {
+  if (categories.some(c => c.name.toLowerCase() === spec.name.toLowerCase())) return categories
+
+  const created = await prisma.category.create({
+    data: {
+      userId: null,
+      name: spec.name,
+      type: spec.type,
+      color: spec.color,
+      isDefault: true,
+      sortOrder: spec.sortOrder,
+    },
+  })
+
+  return [...categories, created as unknown as CategoryItem]
+}
+
+async function ensureTransfersCategory(_userId: string, categories: CategoryItem[]): Promise<CategoryItem[]> {
   const hasTransfers = categories.some(c => c.name.toLowerCase() === 'transfers')
   if (hasTransfers) return categories
 
@@ -42,10 +62,31 @@ export async function batchClassify(batchId: string, userId: string): Promise<vo
       orderBy: { sortOrder: 'asc' },
     }) as unknown as CategoryItem[]
 
-    const categoriesWithTransfers = await ensureTransfersCategory(userId, categories)
+    let categoriesForRules = categories as CategoryItem[]
+    categoriesForRules = await ensureGeneralCategory(categoriesForRules, {
+      name: 'Income',
+      type: 'income',
+      color: '#22c55e',
+      sortOrder: 1,
+    })
+    categoriesForRules = await ensureGeneralCategory(categoriesForRules, {
+      name: 'Salaries',
+      type: 'expense',
+      color: '#ef4444',
+      sortOrder: 2,
+    })
+    categoriesForRules = await ensureGeneralCategory(categoriesForRules, {
+      name: 'Other Expenses',
+      type: 'expense',
+      color: '#94a3b8',
+      sortOrder: 99,
+    })
+    const categoriesWithTransfers = await ensureTransfersCategory(userId, categoriesForRules)
 
-    const fallbackCategory = categories.find(c => c.name === 'Other Expenses') ?? categories[categories.length - 1]
-    const incomeCategory = categories.find(c => c.name === 'Income')
+    const fallbackCategory =
+      categoriesWithTransfers.find(c => c.name === 'Other Expenses') ??
+      categoriesWithTransfers[categoriesWithTransfers.length - 1]
+    const incomeCategory = categoriesWithTransfers.find(c => c.name === 'Income')
     if (!fallbackCategory) {
       await prisma.uploadBatch.update({
         where: { id: batchId },
@@ -54,16 +95,8 @@ export async function batchClassify(batchId: string, userId: string): Promise<vo
       return
     }
 
-    // Auto-classify credits (positive amounts) as Income
     const creditTxs = transactions.filter((t: { id: string; description: string; amount: number }) => t.amount > 0)
     const debitTxs = transactions.filter((t: { id: string; description: string; amount: number }) => t.amount <= 0)
-
-    if (incomeCategory && creditTxs.length > 0) {
-      await prisma.transaction.updateMany({
-        where: { id: { in: creditTxs.map((t: { id: string; description: string; amount: number }) => t.id) } },
-        data: { categoryId: incomeCategory.id, categoryConfidence: 1, classifiedBy: 'rules' },
-      })
-    }
 
     // Deduplicate debits by description for AI classification
     const uniqueDescMap = new Map<string, string[]>() // normalized description -> [ids]
@@ -95,7 +128,7 @@ export async function batchClassify(batchId: string, userId: string): Promise<vo
         chunks.push(uniqueTransactions.slice(i, i + chunkSize))
       }
 
-      let processedCount = creditTxs.length
+      let processedCount = 0
 
       for (const chunk of chunks) {
         const results: ClassificationResult[] = keywordClassifyBatch(
@@ -129,6 +162,36 @@ export async function batchClassify(batchId: string, userId: string): Promise<vo
           data: { processedRows: processedCount },
         })
       }
+    }
+
+    if (creditTxs.length > 0 && fallbackCategory) {
+      type CreditTx = {
+        id: string
+        description: string
+        originalDescription: string | null
+        amount: number
+      }
+      const creditInputs = (creditTxs as CreditTx[]).map(tx => ({
+        id: tx.id,
+        description: tx.originalDescription?.trim() ? tx.originalDescription : tx.description,
+      }))
+      const creditResults = keywordClassifyBatch(categoriesWithTransfers, creditInputs)
+      const creditUpdates = creditResults.map((result, i) => {
+        const useKeyword = result.confidence > 0.55
+        const categoryId = useKeyword
+          ? result.categoryId
+          : incomeCategory?.id ?? fallbackCategory.id
+        const confidence = useKeyword ? result.confidence : incomeCategory ? 1 : 0.5
+        return prisma.transaction.update({
+          where: { id: creditInputs[i]!.id },
+          data: {
+            categoryId,
+            categoryConfidence: confidence,
+            classifiedBy: 'rules',
+          },
+        })
+      })
+      await Promise.all(creditUpdates)
     }
 
     await prisma.uploadBatch.update({

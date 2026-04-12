@@ -73,6 +73,16 @@ export function TransactionFilters() {
         <option value="expense">Expenses</option>
       </select>
 
+      <select
+        value={filters.currency ?? ''}
+        onChange={e => updateFilter('currency', (e.target.value as 'USD' | 'ILS') || undefined)}
+        className="text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+      >
+        <option value="">All currencies</option>
+        <option value="USD">USD</option>
+        <option value="ILS">ILS</option>
+      </select>
+
       <input
         type="date"
         value={filters.dateFrom ?? ''}

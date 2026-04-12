@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { isValidCurrencyParam } from '@/lib/currency'
 
 export async function GET(request: NextRequest) {
   const session = await auth()
@@ -14,6 +15,7 @@ export async function GET(request: NextRequest) {
   const dateFrom = searchParams.get('dateFrom')
   const dateTo = searchParams.get('dateTo')
   const type = searchParams.get('type') as 'income' | 'expense' | null
+  const currencyFilter = searchParams.get('currency')
   const page = parseInt(searchParams.get('page') ?? '1')
   const pageSize = Math.min(parseInt(searchParams.get('pageSize') ?? '50'), 200)
 
@@ -35,6 +37,9 @@ export async function GET(request: NextRequest) {
     where.amount = { gt: 0 }
   } else if (type === 'expense') {
     where.amount = { lt: 0 }
+  }
+  if (isValidCurrencyParam(currencyFilter)) {
+    where.currency = currencyFilter
   }
 
   const [total, transactions] = await Promise.all([

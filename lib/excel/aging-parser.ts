@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx'
-import type { AgingColumnMapping } from '@/types'
+import type { AgingColumnMapping, Currency } from '@/types'
+import { normalizeCurrency } from '@/lib/currency'
 
 export interface AgingTotals {
   current: number
@@ -54,7 +55,7 @@ export function parseAgingExcel(
   buffer: Buffer,
   mapping: AgingColumnMapping,
   asOf: Date = new Date()
-): { totals: AgingTotals; errors: string[] } {
+): { totals: AgingTotals; errors: string[]; currency: Currency } {
   const errors: string[] = []
   const wb = XLSX.read(buffer, { type: 'buffer', cellDates: true })
   const ws = wb.Sheets[wb.SheetNames[0]]
@@ -96,6 +97,11 @@ export function parseAgingExcel(
   let skippedNoDueDate = 0
   let skippedNoAmount = 0
 
+  let reportCurrency: Currency = 'USD'
+  let firstMappedCurrency: Currency | null = null
+  let sawMixedCurrency = false
+  const currencyCol = mapping.currency ? colIndex.currency : undefined
+
   const asOfDay = new Date(asOf.getFullYear(), asOf.getMonth(), asOf.getDate())
 
   for (let r = headerRowIdx + 1; r < rows.length; r++) {
@@ -112,6 +118,15 @@ export function parseAgingExcel(
     if (!dueDate) { skippedNoDueDate++; continue }
     if (amount === 0) { skippedNoAmount++; continue }
 
+    if (currencyCol !== undefined) {
+      const raw = String(row[currencyCol] ?? '').trim()
+      if (raw) {
+        const c = normalizeCurrency(raw)
+        if (firstMappedCurrency === null) firstMappedCurrency = c
+        else if (firstMappedCurrency !== c) sawMixedCurrency = true
+      }
+    }
+
     const bucket = assignBucket(dueDate, asOfDay)
     totals[bucket] += amount
     rowsProcessed++
@@ -123,5 +138,12 @@ export function parseAgingExcel(
   if (skippedNoDueDate > 0) errors.push(`${skippedNoDueDate} row(s) skipped — no parseable due date.`)
   if (skippedNoAmount > 0) errors.push(`${skippedNoAmount} row(s) skipped — zero or missing amount.`)
 
-  return { totals, errors }
+  if (firstMappedCurrency !== null) reportCurrency = firstMappedCurrency
+  if (sawMixedCurrency) {
+    errors.push(
+      'Mixed USD/ILS values in the currency column; stored report currency follows the first non-empty row.'
+    )
+  }
+
+  return { totals, errors, currency: reportCurrency }
 }

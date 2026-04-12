@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     const reportDate = reportDateRaw ? new Date(reportDateRaw) : new Date()
 
     const buffer = Buffer.from(await file.arrayBuffer())
-    const { totals, errors } = parseAgingExcel(buffer, mapping, reportDate)
+    const { totals, errors, currency } = parseAgingExcel(buffer, mapping, reportDate)
 
     const report = await prisma.agingReport.create({
       data: {
@@ -53,6 +53,7 @@ export async function POST(request: NextRequest) {
         days31to60: totals.days31to60,
         days61to90: totals.days61to90,
         days90plus: totals.days90plus,
+        currency,
       },
     })
 

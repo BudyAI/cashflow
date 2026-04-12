@@ -8,11 +8,7 @@ import type { AgingColumnMapping, AgingFilePreview } from '@/types'
 
 type Step = 'idle' | 'previewing' | 'mapping' | 'uploading'
 
-interface AgingUploadZoneProps {
-  asOf: string
-}
-
-export function AgingUploadZone({ asOf }: AgingUploadZoneProps) {
+export function AgingUploadZone() {
   const [step, setStep] = useState<Step>('idle')
   const [currentFile, setCurrentFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<AgingFilePreview | null>(null)
@@ -48,7 +44,7 @@ export function AgingUploadZone({ asOf }: AgingUploadZoneProps) {
       const fd = new FormData()
       fd.append('file', currentFile)
       fd.append('columnMapping', JSON.stringify(mapping))
-      fd.append('reportDate', asOf)
+      fd.append('reportDate', new Date().toISOString().slice(0, 10))
       const res = await fetch('/api/aging', { method: 'POST', body: fd })
       const json = await res.json()
       if (!res.ok) {
@@ -66,7 +62,7 @@ export function AgingUploadZone({ asOf }: AgingUploadZoneProps) {
       setError('Upload failed')
       setStep('mapping')
     }
-  }, [currentFile, asOf])
+  }, [currentFile])
 
   const handleCancel = () => {
     setStep('idle')

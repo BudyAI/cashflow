@@ -20,6 +20,7 @@ function buildUrl(filters: TransactionFilters): string {
   if (filters.dateFrom) params.set('dateFrom', filters.dateFrom)
   if (filters.dateTo) params.set('dateTo', filters.dateTo)
   if (filters.type) params.set('type', filters.type)
+  if (filters.currency) params.set('currency', filters.currency)
   if (filters.page) params.set('page', String(filters.page))
   if (filters.pageSize) params.set('pageSize', String(filters.pageSize))
   return `/api/transactions?${params.toString()}`

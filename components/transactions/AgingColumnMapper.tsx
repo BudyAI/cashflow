@@ -73,7 +73,13 @@ export function AgingColumnMapper({ preview, fileName, onConfirm, onCancel }: Pr
 
         <div className="pt-2 border-t border-slate-100 space-y-3">
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Optional</p>
-          <MappingRow label="Currency"       value={currency}       onChange={setCurrency}       headers={headers} allowNone />
+          <div className="space-y-1">
+            <MappingRow label="Currency" value={currency} onChange={setCurrency} headers={headers} allowNone />
+            <p className="text-xs text-slate-500 max-w-xl ml-40">
+              Optional. If not mapped, the report is stored as <span className="font-medium text-slate-700">USD</span>.
+              Map only if the file has a currency column (USD / ILS). Use a single currency per file for a clean report.
+            </p>
+          </div>
           <MappingRow label="Customer"       value={customer}       onChange={setCustomer}       headers={headers} allowNone />
           <MappingRow label="Contact Name"   value={contactName}    onChange={setContactName}    headers={headers} allowNone />
           <MappingRow label="Issue Date"     value={issueDate}      onChange={setIssueDate}      headers={headers} allowNone />
