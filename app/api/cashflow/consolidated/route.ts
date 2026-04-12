@@ -93,23 +93,29 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  const converted = txs.map(t => {
-    const day = utcDayString(t.date)
-    const ilsPerUsd = rates.get(day)
-    if (ilsPerUsd == null) {
-      throw new Error(`No rate for ${day}`)
-    }
-    return {
-      date: t.date,
-      amount: convertAmountToDisplay(t.amount, t.currency, displayCurrency, ilsPerUsd),
-      balance:
-        t.balance != null
-          ? convertAmountToDisplay(t.balance, t.currency, displayCurrency, ilsPerUsd)
-          : null,
-      categoryId: t.categoryId,
-      category: t.category,
-    }
-  })
+  let converted: Parameters<typeof aggregateCashflowFromTransactions>[0]
+  try {
+    converted = txs.map(t => {
+      const day = utcDayString(t.date)
+      const ilsPerUsd = rates.get(day)
+      if (ilsPerUsd == null) {
+        throw new Error(`No rate for ${day}`)
+      }
+      return {
+        date: t.date,
+        amount: convertAmountToDisplay(t.amount, t.currency, displayCurrency, ilsPerUsd),
+        balance:
+          t.balance != null
+            ? convertAmountToDisplay(t.balance, t.currency, displayCurrency, ilsPerUsd)
+            : null,
+        categoryId: t.categoryId,
+        category: t.category,
+      }
+    })
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'Rate lookup error'
+    return NextResponse.json({ error: msg }, { status: 500 })
+  }
 
   const summary = aggregateCashflowFromTransactions(converted)
   const body: ConsolidatedCashflowResponse = {
