@@ -63,6 +63,7 @@ model Transaction {
   description          String
   originalDescription  String
   amount               Float
+  currency             String    @default("USD")
   balance              Float?
   categoryId           String?
   categoryConfidence   Float?
@@ -130,6 +131,7 @@ model AgingReport {
   days31to60 Float    @default(0)
   days61to90 Float    @default(0)
   days90plus Float    @default(0)
+  currency   String    @default("USD")
   createdAt  DateTime @default(now())
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 

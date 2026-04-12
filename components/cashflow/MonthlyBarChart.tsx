@@ -9,16 +9,40 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts'
+import type { CashflowSummary, Currency } from '@/types'
 import { useCashflowContext, formatK } from './CashflowContext'
 
-export function MonthlyBarChart() {
-  const { summary, isLoading, currency } = useCashflowContext()
+type Props = {
+  summary?: CashflowSummary
+  currency?: Currency
+  isLoading?: boolean
+  suppressContextSummary?: boolean
+}
+
+export function MonthlyBarChart({
+  summary: summaryProp,
+  currency: currencyProp,
+  isLoading: isLoadingProp,
+  suppressContextSummary,
+}: Props = {}) {
+  const ctx = useCashflowContext()
+  const summary = suppressContextSummary ? summaryProp : (summaryProp ?? ctx.summary)
+  const currency = currencyProp ?? ctx.currency
+  const isLoading = isLoadingProp ?? ctx.isLoading
 
   if (isLoading) {
     return <div className="animate-pulse bg-slate-100 rounded-xl h-80" />
   }
 
-  const data = (summary?.periods ?? []).map(p => ({
+  if (!summary) {
+    return (
+      <div className="bg-white rounded-xl border border-slate-200 p-6 text-sm text-slate-500">
+        No chart data.
+      </div>
+    )
+  }
+
+  const data = (summary.periods ?? []).map(p => ({
     month: p.month,
     Income: p.income,
     Expenses: p.expenses,

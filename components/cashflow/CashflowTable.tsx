@@ -1,5 +1,6 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
+import type { CashflowSummary } from '@/types'
 import { useCashflowContext } from './CashflowContext'
 import { useForecast } from '@/hooks/useForecast'
 
@@ -81,8 +82,20 @@ const CELL_CLASS = 'px-3 py-2.5 text-right text-sm tabular-nums whitespace-nowra
 const FORECAST_CELL_CLASS = 'px-3 py-2.5 text-sm tabular-nums whitespace-nowrap border-l border-dashed border-amber-100'
 const SECTION_LABEL = 'sticky left-0 bg-slate-50 px-4 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wide border-r border-slate-100 z-10'
 
-export function CashflowTable() {
-  const { summary, isLoading } = useCashflowContext()
+type TableProps = {
+  summary?: CashflowSummary
+  isLoading?: boolean
+  suppressContextSummary?: boolean
+}
+
+export function CashflowTable({
+  summary: summaryProp,
+  isLoading: isLoadingProp,
+  suppressContextSummary,
+}: TableProps = {}) {
+  const ctx = useCashflowContext()
+  const summary = suppressContextSummary ? summaryProp : (summaryProp ?? ctx.summary)
+  const isLoading = isLoadingProp ?? ctx.isLoading
   const { getValue, setValue } = useForecast()
 
   if (isLoading) {

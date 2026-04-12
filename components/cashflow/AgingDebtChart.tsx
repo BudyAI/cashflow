@@ -11,11 +11,12 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import { Trash2 } from 'lucide-react'
-import { useCashflowContext, formatK } from './CashflowContext'
+import { formatK } from './CashflowContext'
 
 interface AgingReport {
   id: string
   reportDate: string
+  currency: 'USD' | 'ILS'
   current: number
   days1to30: number
   days31to60: number
@@ -40,7 +41,6 @@ const BUCKET_COLORS = {
 
 export function AgingDebtChart() {
   const { data: reports, isLoading } = useSWR<AgingReport[]>('/api/aging', fetcher)
-  const { currency } = useCashflowContext()
 
   const handleDelete = async (id: string) => {
     await fetch(`/api/aging?id=${id}`, { method: 'DELETE' })
@@ -52,6 +52,7 @@ export function AgingDebtChart() {
   }
 
   const latest = (reports ?? [])[0]
+  const chartCurrency = latest?.currency ?? 'USD'
 
   const chartData = latest
     ? [
@@ -82,9 +83,9 @@ export function AgingDebtChart() {
             <BarChart data={chartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
               <XAxis dataKey="bucket" tick={{ fontSize: 11 }} stroke="#94a3b8" />
-              <YAxis tickFormatter={v => formatK(v, currency)} tick={{ fontSize: 12 }} stroke="#94a3b8" />
+              <YAxis tickFormatter={v => formatK(v, chartCurrency)} tick={{ fontSize: 12 }} stroke="#94a3b8" />
               <Tooltip
-                formatter={(value) => [formatK(Number(value), currency), '']}
+                formatter={(value) => [formatK(Number(value), chartCurrency), '']}
                 contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '12px' }}
               />
               <Bar dataKey="amount" radius={[6, 6, 0, 0]}>
@@ -100,10 +101,11 @@ export function AgingDebtChart() {
             <div className="space-y-1">
               {(reports ?? []).map(r => {
                 const total = r.current + r.days1to30 + r.days31to60 + r.days61to90 + r.days90plus
+                const rowCcy = r.currency ?? 'USD'
                 return (
                   <div key={r.id} className="flex items-center justify-between text-xs text-slate-600">
                     <span>{formatDate(r.reportDate)}</span>
-                    <span className="text-slate-400">Total: {formatK(total, currency)}</span>
+                    <span className="text-slate-400">Total: {formatK(total, rowCcy)}</span>
                     <button
                       onClick={() => handleDelete(r.id)}
                       className="text-slate-300 hover:text-red-400 transition-colors ml-3"

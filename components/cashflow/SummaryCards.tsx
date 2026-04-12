@@ -1,9 +1,26 @@
 'use client'
 import { TrendingUp, TrendingDown, DollarSign, Flame } from 'lucide-react'
+import type { CashflowSummary, Currency } from '@/types'
 import { useCashflowContext, formatCurrency } from './CashflowContext'
 
-export function SummaryCards() {
-  const { summary, isLoading, currency } = useCashflowContext()
+type Props = {
+  summary?: CashflowSummary
+  currency?: Currency
+  isLoading?: boolean
+  /** When true, never fall back to native context summary (used by consolidated tab). */
+  suppressContextSummary?: boolean
+}
+
+export function SummaryCards({
+  summary: summaryProp,
+  currency: currencyProp,
+  isLoading: isLoadingProp,
+  suppressContextSummary,
+}: Props = {}) {
+  const ctx = useCashflowContext()
+  const summary = suppressContextSummary ? summaryProp : (summaryProp ?? ctx.summary)
+  const currency = currencyProp ?? ctx.currency
+  const isLoading = isLoadingProp ?? ctx.isLoading
 
   const numMonths = summary?.periods?.length ?? 0
   const burnRate = numMonths > 0 ? (summary?.totalExpenses ?? 0) / numMonths : 0
@@ -14,6 +31,16 @@ export function SummaryCards() {
         {[1, 2, 3, 4].map(i => (
           <div key={i} className="animate-pulse bg-slate-100 rounded-xl h-28" />
         ))}
+      </div>
+    )
+  }
+
+  if (!summary) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="col-span-full rounded-xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500">
+          No consolidated data yet.
+        </div>
       </div>
     )
   }

@@ -3,11 +3,19 @@ import { useCallback, useState } from 'react'
 import { Trash2 } from 'lucide-react'
 import { useTransactionContext } from './TransactionContext'
 import { CategorySelect } from './CategorySelect'
-import type { TransactionWithCategory } from '@/types'
+import type { TransactionWithCategory, Currency } from '@/types'
+import { formatCurrency } from '@/components/cashflow/CashflowContext'
 
-function formatAmount(amount: number): string {
-  const abs = Math.abs(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-  return amount >= 0 ? `+$${abs}` : `-$${abs}`
+function formatSignedAmount(amount: number, currency: Currency): string {
+  const core = formatCurrency(Math.abs(amount), currency)
+  return amount >= 0 ? `+${core}` : `-${core}`
+}
+
+function formatBalance(balance: number, currency: Currency): string {
+  return new Intl.NumberFormat(currency === 'ILS' ? 'he-IL' : 'en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(balance)
 }
 
 function formatDate(dateStr: string): string {
@@ -136,6 +144,7 @@ export function TransactionTable() {
               <th className="text-left px-4 py-3 font-medium text-slate-500">Description</th>
               <th className="text-left px-4 py-3 font-medium text-slate-500">Category</th>
               <th className="text-right px-4 py-3 font-medium text-slate-500">Amount</th>
+              <th className="text-center px-4 py-3 font-medium text-slate-500">CCY</th>
               <th className="text-right px-4 py-3 font-medium text-slate-500">Balance</th>
               <th className="text-center px-4 py-3 font-medium text-slate-500">By</th>
               <th className="w-10 px-4 py-3" />
@@ -168,10 +177,11 @@ export function TransactionTable() {
                   <CategorySelect transaction={tx} onUpdate={handleUpdateCategory} />
                 </td>
                 <td className={`px-4 py-3 text-right font-mono font-medium whitespace-nowrap ${tx.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {formatAmount(tx.amount)}
+                  {formatSignedAmount(tx.amount, tx.currency)}
                 </td>
+                <td className="px-4 py-3 text-center text-xs text-slate-500 font-medium">{tx.currency}</td>
                 <td className="px-4 py-3 text-right font-mono text-slate-600 whitespace-nowrap">
-                  {tx.balance != null ? tx.balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
+                  {tx.balance != null ? formatBalance(tx.balance, tx.currency) : '—'}
                 </td>
                 <td className="px-4 py-3 text-center">
                   <span className={`text-xs px-2 py-0.5 rounded-full ${

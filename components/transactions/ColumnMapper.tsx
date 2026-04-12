@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { ArrowRight, X } from 'lucide-react'
 import type { FilePreview, ColumnMapping } from '@/types'
+import { normalizeCurrency } from '@/lib/currency'
 
 interface Props {
   preview: FilePreview
@@ -20,6 +21,7 @@ export function ColumnMapper({ preview, fileName, onConfirm, onCancel }: Props) 
   const [debit, setDebit] = useState(suggestedMapping.debit ?? '')
   const [credit, setCredit] = useState(suggestedMapping.credit ?? '')
   const [balance, setBalance] = useState(suggestedMapping.balance ?? '')
+  const [currency, setCurrency] = useState(suggestedMapping.currency ?? '')
 
   const isValid =
     date &&
@@ -36,6 +38,7 @@ export function ColumnMapper({ preview, fileName, onConfirm, onCancel }: Props) 
       debit: amountMode === 'debitcredit' ? debit : undefined,
       credit: amountMode === 'debitcredit' ? credit : undefined,
       balance: balance || undefined,
+      currency: currency || undefined,
     })
   }
 
@@ -60,11 +63,15 @@ export function ColumnMapper({ preview, fileName, onConfirm, onCancel }: Props) 
       else if (c) amountDisplay = c
     }
 
+    const rawCurr = currency ? get(currency) : ''
+    const resolvedCurrency = currency ? normalizeCurrency(rawCurr) : 'USD'
+
     return {
       date: date ? get(date) : '',
       description: description ? get(description) : '',
       amount: amountDisplay,
       balance: balance ? get(balance) : '',
+      resolvedCurrency,
     }
   }).filter(r => r.date || r.description)
 
@@ -125,6 +132,20 @@ export function ColumnMapper({ preview, fileName, onConfirm, onCancel }: Props) 
         <div className="pt-2 border-t border-slate-100 space-y-3">
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Optional</p>
           <MappingRow label="Balance" value={balance} onChange={setBalance} headers={headers} allowNone />
+          <div className="space-y-1">
+            <MappingRow
+              label="Currency (optional)"
+              value={currency}
+              onChange={setCurrency}
+              headers={headers}
+              allowNone
+            />
+            <p className="text-xs text-slate-500 max-w-xl">
+              If your file has no currency column, leave &quot;none&quot;. Every imported row will be stored as{' '}
+              <span className="font-medium text-slate-700">USD</span>. Supported in the file: USD / ILS (and common
+              synonyms); other values are treated as USD.
+            </p>
+          </div>
         </div>
       </div>
 
@@ -141,6 +162,9 @@ export function ColumnMapper({ preview, fileName, onConfirm, onCancel }: Props) 
                   <th className="text-left px-4 py-2 font-medium text-slate-500">Date</th>
                   <th className="text-left px-4 py-2 font-medium text-slate-500">Description</th>
                   <th className="text-right px-4 py-2 font-medium text-slate-500">Amount</th>
+                  <th className="text-center px-4 py-2 font-medium text-slate-500">
+                    Currency <span className="text-slate-400 font-normal">(stored)</span>
+                  </th>
                   {balance && <th className="text-right px-4 py-2 font-medium text-slate-500">Balance</th>}
                 </tr>
               </thead>
@@ -153,6 +177,10 @@ export function ColumnMapper({ preview, fileName, onConfirm, onCancel }: Props) 
                       row.amount.startsWith('-') ? 'text-red-600' :
                       row.amount.startsWith('+') ? 'text-green-600' : 'text-slate-700'
                     }`}>{row.amount || '—'}</td>
+                    <td className="px-4 py-2 text-center text-slate-600 whitespace-nowrap text-[11px]">
+                      {row.resolvedCurrency}
+                      {!currency && <span className="text-slate-400"> (default)</span>}
+                    </td>
                     {balance && (
                       <td className="px-4 py-2 text-right font-mono text-slate-500 whitespace-nowrap">{row.balance || '—'}</td>
                     )}

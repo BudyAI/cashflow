@@ -1,8 +1,11 @@
+export type Currency = 'USD' | 'ILS'
+
 export interface ParsedTransaction {
   date: Date
   description: string
   originalDescription: string
   amount: number
+  currency: Currency
   balance?: number | null
 }
 
@@ -31,6 +34,7 @@ export interface TransactionWithCategory {
   classifiedBy: string
   manuallyOverridden: boolean
   overrideHistory: string
+  currency: Currency
   createdAt: string
   updatedAt: string
   category: {
@@ -85,6 +89,13 @@ export interface CashflowSummary {
   endingBalances: Record<string, number>
 }
 
+export interface ConsolidatedCashflowMeta {
+  rateProvider: 'ECB_EXR'
+  note: string
+}
+
+export type ConsolidatedCashflowResponse = CashflowSummary & { meta: ConsolidatedCashflowMeta }
+
 export interface UploadBatchStatus {
   id: string
   status: 'processing' | 'complete' | 'failed'
@@ -125,6 +136,7 @@ export interface ColumnMapping {
   debit?: string
   credit?: string
   balance?: string
+  currency?: string
 }
 
 export interface FilePreview {
@@ -138,6 +150,7 @@ export interface FilePreview {
     debit: string | null
     credit: string | null
     balance: string | null
+    currency: string | null
   }
 }
 
@@ -147,6 +160,7 @@ export interface TransactionFilters {
   dateFrom?: string
   dateTo?: string
   type?: 'income' | 'expense'
+  currency?: Currency
   page?: number
   pageSize?: number
 }

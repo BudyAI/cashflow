@@ -1,7 +1,6 @@
 'use client'
 import { createContext, useContext } from 'react'
-import type { CashflowSummary } from '@/types'
-import type { Currency } from '@/hooks/useCashflow'
+import type { CashflowSummary, Currency } from '@/types'
 
 export type { Currency }
 
