@@ -71,9 +71,16 @@ export async function DELETE(request: NextRequest) {
   }
 
   const { searchParams } = new URL(request.url)
-  const id = searchParams.get('id')
-  if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
+  const userId = session.user.id
 
-  await prisma.agingReport.deleteMany({ where: { id, userId: session.user.id } })
+  if (searchParams.get('all') === 'true' || searchParams.get('all') === '1') {
+    await prisma.agingReport.deleteMany({ where: { userId } })
+    return NextResponse.json({ ok: true })
+  }
+
+  const id = searchParams.get('id')
+  if (!id) return NextResponse.json({ error: 'Missing id or all=true' }, { status: 400 })
+
+  await prisma.agingReport.deleteMany({ where: { id, userId } })
   return NextResponse.json({ ok: true })
 }
