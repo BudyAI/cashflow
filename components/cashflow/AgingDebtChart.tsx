@@ -1,6 +1,7 @@
 "use client";
-import useSWR from "swr";
+import useSWR, { mutate } from "swr";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
+import { Trash2 } from "lucide-react";
 import { formatK } from "./CashflowContext";
 
 interface AgingReport {
@@ -75,6 +76,20 @@ export function AgingDebtChart() {
     : [];
 
   const pieSlices = chartData.filter((d) => d.amount > 0);
+  const hasReports = (reports?.length ?? 0) > 0;
+
+  const handleDeleteAllReports = async () => {
+    if (
+      !window.confirm(
+        "Delete all uploaded aging reports? This cannot be undone.",
+      )
+    ) {
+      return;
+    }
+    const res = await fetch("/api/aging?all=true", { method: "DELETE" });
+    if (!res.ok) return;
+    await mutate("/api/aging");
+  };
 
   if (isLoading) {
     return <div className="animate-pulse bg-slate-100 rounded-xl h-[360px]" />;
@@ -82,12 +97,25 @@ export function AgingDebtChart() {
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 p-6">
-      <div className="mb-4">
-        <h3 className="text-lg font-semibold text-slate-900">Aging Debt</h3>
-        <p className="text-sm text-slate-400 mt-0.5">
-          Accounts receivable by overdue bucket
-          {latest ? ` (as of ${formatDate(latest.reportDate)})` : ""}
-        </p>
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <h3 className="text-lg font-semibold text-slate-900">Aging Debt</h3>
+          <p className="text-sm text-slate-400 mt-0.5">
+            Accounts receivable by overdue bucket
+            {latest ? ` (as of ${formatDate(latest.reportDate)})` : ""}
+          </p>
+        </div>
+        {hasReports ? (
+          <button
+            type="button"
+            onClick={handleDeleteAllReports}
+            className="shrink-0 rounded-md p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-red-500"
+            aria-label="Delete all aging reports"
+            title="Delete all aging reports"
+          >
+            <Trash2 className="h-5 w-5" aria-hidden />
+          </button>
+        ) : null}
       </div>
 
       {chartData.length === 0 ? (
@@ -164,30 +192,6 @@ export function AgingDebtChart() {
               );
             })}
           </div>
-
-          {/* <div className="mt-4 border-t border-slate-100 pt-4">
-            <p className="text-xs font-medium text-slate-500 mb-2">Uploaded reports</p>
-            <div className="space-y-1">
-              {(reports ?? []).map(r => {
-                const total = r.current + r.days1to30 + r.days31to60 + r.days61to90 + r.days90plus
-                const rowCcy = r.currency ?? 'USD'
-                return (
-                  <div key={r.id} className="flex items-center justify-between text-xs text-slate-600">
-                    <span>{formatDate(r.reportDate)}</span>
-                    <span className="text-slate-400">Total: {formatK(total, rowCcy)}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(r.id)}
-                      className="text-slate-300 hover:text-red-400 transition-colors ml-3"
-                      aria-label={`Delete report ${formatDate(r.reportDate)}`}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                )
-              })}
-            </div>
-          </div> */}
         </>
       )}
     </div>
