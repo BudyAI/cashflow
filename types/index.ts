@@ -56,6 +56,17 @@ export interface CategoryItem {
   createdAt: string
 }
 
+export interface CategoryKeywordItem {
+  id: string
+  userId: string | null
+  categoryId: string
+  keyword: string
+  normalizedKeyword: string
+  confidence: number
+  createdAt: string
+  updatedAt: string
+}
+
 export interface MonthlySummary {
   month: string
   income: number

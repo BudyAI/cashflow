@@ -1,5 +1,5 @@
 import type { CategoryItem } from '@/types'
-import { keywordClassifyBatch } from './keyword-classifier'
+import { keywordClassifyBatch, type KeywordRule } from './keyword-classifier'
 
 function makeCategories(): CategoryItem[] {
   const base = new Date().toISOString()
@@ -21,6 +21,15 @@ function assertEqual(actual: unknown, expected: unknown, msg: string) {
 
 export function runKeywordClassifierSmoke() {
   const categories = makeCategories()
+  const rules: KeywordRule[] = [
+    { categoryId: 'salaries', normalizedKeyword: 'salary', confidence: 0.95 },
+    { categoryId: 'salaries', normalizedKeyword: 'משכורת', confidence: 0.95 },
+    { categoryId: 'transfers', normalizedKeyword: 'העברה', confidence: 0.95 },
+    { categoryId: 'transfers', normalizedKeyword: 'העברה בנקאית', confidence: 0.95 },
+    { categoryId: 'cc', normalizedKeyword: 'ישראכרט', confidence: 0.9 },
+    { categoryId: 'cc', normalizedKeyword: 'cal', confidence: 0.9 },
+    { categoryId: 'fees', normalizedKeyword: 'עמלה', confidence: 0.85 },
+  ]
   const results = keywordClassifyBatch(categories, [
     { id: '1', description: 'העברה בין חשבונות' },
     { id: '2', description: 'בנק לאומי העברה בנקאית' },
@@ -28,7 +37,7 @@ export function runKeywordClassifierSmoke() {
     { id: '4', description: 'CAL credit card payment' },
     { id: '5', description: 'עמלת פעולה' },
     { id: '6', description: 'העברה משכורת' },
-  ])
+  ], rules)
 
   const byId = new Map(results.map(r => [r.id, r.categoryId]))
   assertEqual(byId.get('1'), 'transfers', 'Hebrew transfer maps to Transfers')

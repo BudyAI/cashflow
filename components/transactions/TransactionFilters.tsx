@@ -4,6 +4,7 @@ import { Search, Sparkles } from "lucide-react";
 import { useTransactionContext } from "./TransactionContext";
 import { useCategories } from "@/hooks/useCategories";
 import { AddCategoryButton } from "./AddCategoryButton";
+import { CategoryKeywordsManager } from "./CategoryKeywordsManager";
 
 export function TransactionFilters() {
   const { filters, updateFilter, mutate } = useTransactionContext();
@@ -67,6 +68,7 @@ export function TransactionFilters() {
           ))}
         </select>
         <AddCategoryButton />
+        <CategoryKeywordsManager />
       </div>
 
       <select

@@ -28,6 +28,9 @@ export async function PATCH(
   if (!newCategory) {
     return NextResponse.json({ error: 'Category not found' }, { status: 400 })
   }
+  if (newCategory.userId !== null && newCategory.userId !== session.user.id) {
+    return NextResponse.json({ error: 'Category not found' }, { status: 400 })
+  }
 
   const overrideHistory = JSON.parse(transaction.overrideHistory) as unknown[]
   overrideHistory.push({
