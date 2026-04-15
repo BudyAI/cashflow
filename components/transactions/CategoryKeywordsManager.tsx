@@ -19,6 +19,7 @@ export function CategoryKeywordsManager() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [newKeyword, setNewKeyword] = useState("");
+  const [activeTab, setActiveTab] = useState<"keywords" | "priority">("keywords");
   const [categoryOrder, setCategoryOrder] = useState<string[]>([]);
   const [reordering, setReordering] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -114,7 +115,10 @@ export function CategoryKeywordsManager() {
     <div className="relative">
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setOpen(true);
+          setActiveTab("keywords");
+        }}
         className="flex items-center gap-2 text-sm px-3 py-2 border border-slate-200 rounded-lg text-slate-600 hover:text-blue-600 hover:border-blue-300 transition-colors"
       >
         <Tags className="w-4 h-4" />
@@ -141,129 +145,159 @@ export function CategoryKeywordsManager() {
               </button>
             </div>
 
-            <div className="space-y-3">
-              <div className="rounded-lg border border-slate-200 p-3">
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <p className="text-sm font-medium text-slate-800">Category priority</p>
-                  <button
-                    type="button"
-                    onClick={() => void handleSaveCategoryOrder()}
-                    disabled={reordering || categoryOrder.length === 0}
-                    className="inline-flex items-center rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-                  >
-                    Save order
-                  </button>
-                </div>
-                <p className="text-xs text-slate-500 mb-2">
-                  When a description matches keywords from multiple categories, the higher category wins.
-                </p>
-                <ul className="divide-y divide-slate-100 rounded border border-slate-100 bg-slate-50">
-                  {orderedCategories.map((category, index) => (
-                    <li key={category.id} className="flex items-center justify-between px-2 py-1.5">
-                      <span className="text-sm text-slate-700">{category.name}</span>
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => moveCategory(category.id, "up")}
-                          disabled={index === 0 || reordering}
-                          className="rounded border border-slate-200 bg-white p-1 text-slate-600 hover:text-slate-900 disabled:opacity-40"
-                          title="Move up"
-                        >
-                          <ArrowUp className="h-3.5 w-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => moveCategory(category.id, "down")}
-                          disabled={index === orderedCategories.length - 1 || reordering}
-                          className="rounded border border-slate-200 bg-white p-1 text-slate-600 hover:text-slate-900 disabled:opacity-40"
-                          title="Move down"
-                        >
-                          <ArrowDown className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+            <div className="mb-4 flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-1">
+              <button
+                type="button"
+                onClick={() => setActiveTab("keywords")}
+                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                  activeTab === "keywords"
+                    ? "bg-white text-slate-900 shadow-sm"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                Keywords
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("priority")}
+                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                  activeTab === "priority"
+                    ? "bg-white text-slate-900 shadow-sm"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                Categories Priority
+              </button>
+            </div>
 
-              <label className="block">
-                <span className="text-sm text-slate-600">Category</span>
-                <select
-                  value={selectedCategoryId}
-                  onChange={(e) => setSelectedCategoryId(e.target.value)}
-                  className="mt-1 w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={newKeyword}
-                  onChange={(e) => setNewKeyword(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      void handleAddKeyword();
-                    }
-                  }}
-                  placeholder="Add keyword (e.g. payroll, uber)"
-                  className="flex-1 text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <button
-                  type="button"
-                  onClick={() => void handleAddKeyword()}
-                  disabled={saving || !newKeyword.trim() || !selectedCategoryId}
-                  className="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add
-                </button>
-              </div>
-
-              <div className="rounded-lg border border-slate-200 max-h-64 overflow-auto">
-                {loading ? (
-                  <p className="p-3 text-sm text-slate-500">Loading keywords...</p>
-                ) : keywords.length === 0 ? (
-                  <p className="p-3 text-sm text-slate-500">
-                    No keywords yet for {selectedCategory?.name ?? "this category"}.
+            {activeTab === "priority" ? (
+              <div className="space-y-3">
+                <div className="rounded-lg border border-slate-200 p-3">
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <p className="text-sm font-medium text-slate-800">Category priority</p>
+                    <button
+                      type="button"
+                      onClick={() => void handleSaveCategoryOrder()}
+                      disabled={reordering || categoryOrder.length === 0}
+                      className="inline-flex items-center rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                    >
+                      Save order
+                    </button>
+                  </div>
+                  <p className="text-xs text-slate-500 mb-2">
+                    When a description matches keywords from multiple categories, the higher category
+                    wins.
                   </p>
-                ) : (
-                  <ul className="divide-y divide-slate-100">
-                    {keywords.map((keyword) => (
-                      <li
-                        key={keyword.id}
-                        className="flex items-center justify-between px-3 py-2 text-sm"
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-slate-800">{keyword.keyword}</span>
-                          {keyword.userId === null && (
-                            <span className="text-xs bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">
-                              default
-                            </span>
-                          )}
-                        </div>
-                        {keyword.userId !== null && (
+                  <ul className="max-h-72 overflow-auto divide-y divide-slate-100 rounded border border-slate-100 bg-slate-50">
+                    {orderedCategories.map((category, index) => (
+                      <li key={category.id} className="flex items-center justify-between px-2 py-1.5">
+                        <span className="text-sm text-slate-700">{category.name}</span>
+                        <div className="flex items-center gap-1">
                           <button
                             type="button"
-                            onClick={() => void handleDeleteKeyword(keyword)}
-                            className="text-slate-400 hover:text-red-600"
-                            title="Remove keyword"
+                            onClick={() => moveCategory(category.id, "up")}
+                            disabled={index === 0 || reordering}
+                            className="rounded border border-slate-200 bg-white p-1 text-slate-600 hover:text-slate-900 disabled:opacity-40"
+                            title="Move up"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <ArrowUp className="h-3.5 w-3.5" />
                           </button>
-                        )}
+                          <button
+                            type="button"
+                            onClick={() => moveCategory(category.id, "down")}
+                            disabled={index === orderedCategories.length - 1 || reordering}
+                            className="rounded border border-slate-200 bg-white p-1 text-slate-600 hover:text-slate-900 disabled:opacity-40"
+                            title="Move down"
+                          >
+                            <ArrowDown className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
                       </li>
                     ))}
                   </ul>
-                )}
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="space-y-3">
+                <label className="block">
+                  <span className="text-sm text-slate-600">Category</span>
+                  <select
+                    value={selectedCategoryId}
+                    onChange={(e) => setSelectedCategoryId(e.target.value)}
+                    className="mt-1 w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newKeyword}
+                    onChange={(e) => setNewKeyword(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        void handleAddKeyword();
+                      }
+                    }}
+                    placeholder="Add keyword (e.g. payroll, uber)"
+                    className="flex-1 text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void handleAddKeyword()}
+                    disabled={saving || !newKeyword.trim() || !selectedCategoryId}
+                    className="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add
+                  </button>
+                </div>
+
+                <div className="rounded-lg border border-slate-200 max-h-64 overflow-auto">
+                  {loading ? (
+                    <p className="p-3 text-sm text-slate-500">Loading keywords...</p>
+                  ) : keywords.length === 0 ? (
+                    <p className="p-3 text-sm text-slate-500">
+                      No keywords yet for {selectedCategory?.name ?? "this category"}.
+                    </p>
+                  ) : (
+                    <ul className="divide-y divide-slate-100">
+                      {keywords.map((keyword) => (
+                        <li
+                          key={keyword.id}
+                          className="flex items-center justify-between px-3 py-2 text-sm"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-slate-800">{keyword.keyword}</span>
+                            {keyword.userId === null && (
+                              <span className="text-xs bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">
+                                default
+                              </span>
+                            )}
+                          </div>
+                          {keyword.userId !== null && (
+                            <button
+                              type="button"
+                              onClick={() => void handleDeleteKeyword(keyword)}
+                              className="text-slate-400 hover:text-red-600"
+                              title="Remove keyword"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            )}
 
             {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
           </div>
