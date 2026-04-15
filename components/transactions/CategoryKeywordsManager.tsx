@@ -170,8 +170,15 @@ export function CategoryKeywordsManager() {
               </button>
             </div>
 
-            {activeTab === "priority" ? (
-              <div className="space-y-3">
+            <div className="relative h-[400px]">
+              <div
+                className={`absolute inset-0 overflow-y-auto pr-1 transition-all duration-200 ease-in-out ${
+                  activeTab === "priority"
+                    ? "translate-y-0 opacity-100"
+                    : "translate-y-1 opacity-0 pointer-events-none"
+                }`}
+              >
+                <div className="space-y-3 pt-1">
                 <div className="rounded-lg border border-slate-200 p-3">
                   <div className="flex items-center justify-between gap-2 mb-2">
                     <p className="text-sm font-medium text-slate-800">Category priority</p>
@@ -217,8 +224,16 @@ export function CategoryKeywordsManager() {
                   </ul>
                 </div>
               </div>
-            ) : (
-              <div className="space-y-3">
+              </div>
+
+              <div
+                className={`absolute inset-0 overflow-y-auto pr-1 transition-all duration-200 ease-in-out ${
+                  activeTab === "keywords"
+                    ? "translate-y-0 opacity-100"
+                    : "translate-y-1 opacity-0 pointer-events-none"
+                }`}
+              >
+                <div className="space-y-3 pt-1">
                 <label className="block">
                   <span className="text-sm text-slate-600">Category</span>
                   <select
@@ -297,7 +312,8 @@ export function CategoryKeywordsManager() {
                   )}
                 </div>
               </div>
-            )}
+              </div>
+            </div>
 
             {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
           </div>
