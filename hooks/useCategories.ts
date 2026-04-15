@@ -28,6 +28,17 @@ export function useCategories() {
     await mutate()
   }, [mutate])
 
+  const reorderCategories = useCallback(async (orderedCategoryIds: string[]) => {
+    const res = await fetch('/api/categories', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orderedCategoryIds }),
+    })
+    if (!res.ok) throw new Error('Failed to reorder categories')
+    await mutate()
+    return res.json()
+  }, [mutate])
+
   const getCategoryKeywords = useCallback(async (categoryId: string): Promise<CategoryKeywordItem[]> => {
     const res = await fetch(`/api/categories/${categoryId}/keywords`)
     if (!res.ok) throw new Error('Failed to load keywords')
@@ -58,6 +69,7 @@ export function useCategories() {
     mutate,
     createCategory,
     deleteCategory,
+    reorderCategories,
     getCategoryKeywords,
     addCategoryKeyword,
     deleteCategoryKeyword,

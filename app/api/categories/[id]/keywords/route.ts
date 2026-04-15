@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import {
+  recategorizeTransactionsForKeyword,
+} from "@/lib/classification/keyword-recategorizer";
+import { normalizeKeywordForRecategorization } from "@/lib/classification/keyword-match";
 import { nanoid } from "nanoid";
-
-function normalizeKeyword(input: string): string {
-  return input.normalize("NFKC").trim().replace(/\s+/g, " ").toLowerCase();
-}
 
 export async function GET(
   _request: NextRequest,
@@ -60,7 +60,7 @@ export async function POST(
     return NextResponse.json({ error: "Keyword is required" }, { status: 400 });
   }
 
-  const normalizedKeyword = normalizeKeyword(keywordRaw);
+  const normalizedKeyword = normalizeKeywordForRecategorization(keywordRaw);
   const existing = await prisma.categoryKeyword.findFirst({
     where: {
       categoryId: params.id,
@@ -84,5 +84,12 @@ export async function POST(
     },
   });
 
-  return NextResponse.json(created, { status: 201 });
+  const updatedCount = await recategorizeTransactionsForKeyword({
+    userId: session.user.id,
+    categoryId: params.id,
+    keyword: normalizedKeyword,
+    confidence,
+  });
+
+  return NextResponse.json({ ...created, updatedCount }, { status: 201 });
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Tags, X, Plus, Trash2 } from "lucide-react";
+import { Tags, X, Plus, Trash2, ArrowUp, ArrowDown } from "lucide-react";
 import type { CategoryKeywordItem } from "@/types";
 import { useCategories } from "@/hooks/useCategories";
 
@@ -11,6 +11,7 @@ export function CategoryKeywordsManager() {
     getCategoryKeywords,
     addCategoryKeyword,
     deleteCategoryKeyword,
+    reorderCategories,
   } = useCategories();
   const [open, setOpen] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
@@ -18,6 +19,8 @@ export function CategoryKeywordsManager() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [newKeyword, setNewKeyword] = useState("");
+  const [categoryOrder, setCategoryOrder] = useState<string[]>([]);
+  const [reordering, setReordering] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const selectedCategory = useMemo(
@@ -31,6 +34,11 @@ export function CategoryKeywordsManager() {
       setSelectedCategoryId(categories[0].id);
     }
   }, [categories, open, selectedCategoryId]);
+
+  useEffect(() => {
+    if (!open) return;
+    setCategoryOrder(categories.map((category) => category.id));
+  }, [categories, open]);
 
   useEffect(() => {
     if (!open || !selectedCategoryId) return;
@@ -68,6 +76,40 @@ export function CategoryKeywordsManager() {
     }
   }
 
+  function moveCategory(categoryId: string, direction: "up" | "down") {
+    setCategoryOrder((current) => {
+      const index = current.indexOf(categoryId);
+      if (index < 0) return current;
+      const targetIndex = direction === "up" ? index - 1 : index + 1;
+      if (targetIndex < 0 || targetIndex >= current.length) return current;
+      const next = [...current];
+      const [moved] = next.splice(index, 1);
+      next.splice(targetIndex, 0, moved);
+      return next;
+    });
+  }
+
+  async function handleSaveCategoryOrder() {
+    if (categoryOrder.length === 0) return;
+    setReordering(true);
+    setError(null);
+    try {
+      await reorderCategories(categoryOrder);
+    } catch {
+      setError("Could not save category priority");
+    } finally {
+      setReordering(false);
+    }
+  }
+
+  const orderedCategories = useMemo(
+    () =>
+      categoryOrder
+        .map((id) => categories.find((category) => category.id === id))
+        .filter((category): category is NonNullable<typeof category> => Boolean(category)),
+    [categories, categoryOrder],
+  );
+
   return (
     <div className="relative">
       <button
@@ -100,6 +142,50 @@ export function CategoryKeywordsManager() {
             </div>
 
             <div className="space-y-3">
+              <div className="rounded-lg border border-slate-200 p-3">
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <p className="text-sm font-medium text-slate-800">Category priority</p>
+                  <button
+                    type="button"
+                    onClick={() => void handleSaveCategoryOrder()}
+                    disabled={reordering || categoryOrder.length === 0}
+                    className="inline-flex items-center rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    Save order
+                  </button>
+                </div>
+                <p className="text-xs text-slate-500 mb-2">
+                  When a description matches keywords from multiple categories, the higher category wins.
+                </p>
+                <ul className="divide-y divide-slate-100 rounded border border-slate-100 bg-slate-50">
+                  {orderedCategories.map((category, index) => (
+                    <li key={category.id} className="flex items-center justify-between px-2 py-1.5">
+                      <span className="text-sm text-slate-700">{category.name}</span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => moveCategory(category.id, "up")}
+                          disabled={index === 0 || reordering}
+                          className="rounded border border-slate-200 bg-white p-1 text-slate-600 hover:text-slate-900 disabled:opacity-40"
+                          title="Move up"
+                        >
+                          <ArrowUp className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => moveCategory(category.id, "down")}
+                          disabled={index === orderedCategories.length - 1 || reordering}
+                          className="rounded border border-slate-200 bg-white p-1 text-slate-600 hover:text-slate-900 disabled:opacity-40"
+                          title="Move down"
+                        >
+                          <ArrowDown className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
               <label className="block">
                 <span className="text-sm text-slate-600">Category</span>
                 <select
