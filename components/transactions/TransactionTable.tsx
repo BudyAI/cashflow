@@ -151,13 +151,19 @@ export function TransactionTable() {
             </tr>
           </thead>
           <tbody>
-            {transactions.map((tx: TransactionWithCategory) => (
-              <tr
-                key={tx.id}
-                className={`border-b border-slate-50 transition-colors ${
-                  selected.has(tx.id) ? 'bg-blue-50' : 'hover:bg-slate-50'
-                }`}
-              >
+            {transactions.map((tx: TransactionWithCategory) => {
+              const isUncategorized = !tx.categoryId
+              const rowClassName = selected.has(tx.id)
+                ? 'bg-blue-50'
+                : isUncategorized
+                  ? 'bg-amber-50/40 hover:bg-amber-50/60'
+                  : 'hover:bg-slate-50'
+
+              return (
+                <tr
+                  key={tx.id}
+                  className={`border-b border-slate-50 transition-colors ${rowClassName}`}
+                >
                 <td className="px-4 py-3">
                   <input
                     type="checkbox"
@@ -168,7 +174,11 @@ export function TransactionTable() {
                 </td>
                 <td className="px-4 py-3 text-slate-500 whitespace-nowrap">{formatDate(tx.date)}</td>
                 <td className="px-4 py-3 text-slate-900 max-w-xs truncate" title={tx.originalDescription}>
-                  {tx.originalDescription}
+                  {tx.originalDescription?.trim() ? (
+                    tx.originalDescription
+                  ) : (
+                    <span className="text-slate-400 italic">No description</span>
+                  )}
                   {tx.manuallyOverridden && (
                     <span className="ml-2 text-xs text-blue-500">edited</span>
                   )}
@@ -200,8 +210,9 @@ export function TransactionTable() {
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </td>
-              </tr>
-            ))}
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>

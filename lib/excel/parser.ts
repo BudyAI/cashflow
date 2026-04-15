@@ -260,7 +260,6 @@ export function parseExcelWithMapping(buffer: Buffer, mapping: ColumnMapping): P
       }
 
       const description = (row[descIdx] ?? '').trim()
-      if (!description) continue
 
       let amount: number
       if (amountIdx !== -1) {
@@ -362,7 +361,6 @@ function parseRows(rows: string[][]): ParseResult {
       const description = descCandidateIdxs
         .map(idx => (row[idx] ?? '').trim())
         .find(v => v !== '') ?? ''
-      if (!description) continue
 
       let amount: number
       if (amountIdx !== -1) {

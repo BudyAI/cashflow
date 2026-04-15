@@ -144,10 +144,31 @@ export async function batchClassify(
       return;
     }
 
-    const creditTxs = transactions.filter(
+    const hasDescription = (value: string | null | undefined): boolean =>
+      typeof value === "string" && value.trim().length > 0;
+
+    const uncategorizedTxIds = transactions
+      .filter((t) => !hasDescription(t.originalDescription) && !hasDescription(t.description))
+      .map((t) => t.id);
+
+    if (uncategorizedTxIds.length > 0) {
+      await prisma.transaction.updateMany({
+        where: { id: { in: uncategorizedTxIds } },
+        data: {
+          categoryId: null,
+          categoryConfidence: null,
+          classifiedBy: "uncategorized",
+        },
+      });
+    }
+
+    const uncategorizedTxIdSet = new Set(uncategorizedTxIds);
+    const classifiableTxs = transactions.filter((t) => !uncategorizedTxIdSet.has(t.id));
+
+    const creditTxs = classifiableTxs.filter(
       (t: { id: string; description: string; amount: number }) => t.amount > 0,
     );
-    const debitTxs = transactions.filter(
+    const debitTxs = classifiableTxs.filter(
       (t: { id: string; description: string; amount: number }) => t.amount <= 0,
     );
 
