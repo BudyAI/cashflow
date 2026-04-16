@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import type { CategoryItem, ClassificationResult } from "@/types";
-import { keywordClassifyBatch } from "./keyword-classifier";
+import { keywordClassifyBatch, type KeywordRule } from "./keyword-classifier";
 
 /** Keyword rule confidences are ≥ ~0.75; fallback is 0.5 — prefer keyword when clearly above fallback. */
 const KEYWORD_CONFIDENCE_THRESHOLD = 0.55;
@@ -53,6 +53,33 @@ async function ensureTransfersCategory(
   return [...categories, created as unknown as CategoryItem];
 }
 
+async function loadKeywordRules(userId: string): Promise<KeywordRule[]> {
+  const rows = await prisma.categoryKeyword.findMany({
+    where: {
+      OR: [{ userId }, { userId: null }],
+      category: {
+        OR: [{ userId }, { userId: null }],
+      },
+    },
+    orderBy: [{ updatedAt: "desc" }],
+  });
+
+  const byKeyword = new Map<string, KeywordRule>();
+  const userRows = rows.filter((row) => row.userId === userId);
+  const globalRows = rows.filter((row) => row.userId === null);
+
+  for (const row of [...userRows, ...globalRows]) {
+    if (byKeyword.has(row.normalizedKeyword)) continue;
+    byKeyword.set(row.normalizedKeyword, {
+      categoryId: row.categoryId,
+      normalizedKeyword: row.normalizedKeyword,
+      confidence: row.confidence,
+    });
+  }
+
+  return Array.from(byKeyword.values());
+}
+
 export async function batchClassify(
   batchId: string,
   userId: string,
@@ -98,6 +125,7 @@ export async function batchClassify(
       userId,
       categoriesForRules,
     );
+    const keywordRules = await loadKeywordRules(userId);
 
     const fallbackCategory =
       categoriesWithTransfers.find((c) => c.name === "Other Expenses") ??
@@ -116,10 +144,31 @@ export async function batchClassify(
       return;
     }
 
-    const creditTxs = transactions.filter(
+    const hasDescription = (value: string | null | undefined): boolean =>
+      typeof value === "string" && value.trim().length > 0;
+
+    const uncategorizedTxIds = transactions
+      .filter((t) => !hasDescription(t.originalDescription) && !hasDescription(t.description))
+      .map((t) => t.id);
+
+    if (uncategorizedTxIds.length > 0) {
+      await prisma.transaction.updateMany({
+        where: { id: { in: uncategorizedTxIds } },
+        data: {
+          categoryId: null,
+          categoryConfidence: null,
+          classifiedBy: "uncategorized",
+        },
+      });
+    }
+
+    const uncategorizedTxIdSet = new Set(uncategorizedTxIds);
+    const classifiableTxs = transactions.filter((t) => !uncategorizedTxIdSet.has(t.id));
+
+    const creditTxs = classifiableTxs.filter(
       (t: { id: string; description: string; amount: number }) => t.amount > 0,
     );
-    const debitTxs = transactions.filter(
+    const debitTxs = classifiableTxs.filter(
       (t: { id: string; description: string; amount: number }) => t.amount <= 0,
     );
 
@@ -163,6 +212,7 @@ export async function batchClassify(
         const results: ClassificationResult[] = keywordClassifyBatch(
           categoriesWithTransfers,
           chunk.map((t: TxLite) => ({ id: t.id, description: t.description })),
+          keywordRules,
         );
 
         // Fan results back to all transactions sharing description
@@ -209,6 +259,7 @@ export async function batchClassify(
       const creditResults = keywordClassifyBatch(
         categoriesWithTransfers,
         creditInputs,
+        keywordRules,
       );
       const creditUpdates = creditResults.map((result, i) => {
         const useKeyword = result.confidence > KEYWORD_CONFIDENCE_THRESHOLD;

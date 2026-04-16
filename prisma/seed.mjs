@@ -45,13 +45,81 @@ const GENERAL_CATEGORIES = [
   { name: 'Other Expenses', type: 'expense', color: '#94a3b8', sortOrder: 99 },
 ]
 
+const DEFAULT_KEYWORD_RULES = [
+  { categoryName: 'Salaries', confidence: 0.95, keywords: ['salary', 'payroll', 'משכורת', 'שכר'] },
+  {
+    categoryName: 'Transfers',
+    confidence: 0.95,
+    keywords: [
+      'transfer',
+      'bank transfer',
+      'internal transfer',
+      'wire',
+      'ach',
+      'העברה',
+      'העברה בנקאית',
+      'העברה פנימית',
+      'בין חשבונות',
+      'מחשבון',
+      'לחשבון',
+      'זיכוי העברה',
+      'העברת',
+      'הועבר',
+    ],
+  },
+  {
+    categoryName: 'Credit Card',
+    confidence: 0.9,
+    keywords: ['isracard', 'ישראכרט', 'cal', 'כאל', 'max', 'מקס', 'credit card', 'כרטיס אשראי', 'חיוב כרטיס'],
+  },
+  { categoryName: 'Interest / Bank Fees', confidence: 0.85, keywords: ['fee', 'fees', 'commission', 'interest', 'עמלה', 'עמלות', 'ריבית'] },
+  { categoryName: 'Food & Dining', confidence: 0.8, keywords: ['restaurant', 'cafe', 'coffee', 'food', 'wolt', 'tenbis', 'מסעדה', 'קפה', 'אוכל'] },
+  {
+    categoryName: 'Transport',
+    confidence: 0.8,
+    keywords: ['uber', 'lyft', 'taxi', 'train', 'bus', 'rav kav', 'רב-קו', 'רב קו', 'מונית', 'אוטובוס', 'רכבת'],
+  },
+  { categoryName: 'Utilities', confidence: 0.75, keywords: ['electric', 'electricity', 'water', 'gas', 'internet', 'חשמל', 'מים', 'גז', 'אינטרנט'] },
+  {
+    categoryName: 'SaaS Services',
+    confidence: 0.75,
+    keywords: [
+      'google',
+      'gcp',
+      'aws',
+      'amazon web services',
+      'microsoft',
+      'azure',
+      'github',
+      'slack',
+      'notion',
+      'figma',
+      'jira',
+      'atlassian',
+      'stripe',
+      'פיתוח',
+      'פיתוח תוכנה',
+      'פיתוח אפליקציה',
+      'פיתוח מערכת',
+      'פיתוח מערכת תוכנה',
+      'פיתוח מערכת אפליקציה',
+      'פיתוח מערכת מחשבית',
+    ],
+  },
+]
+
+function normalizeKeyword(input) {
+  return input.normalize('NFKC').trim().replace(/\s+/g, ' ').toLowerCase()
+}
+
 async function main() {
+  const categoryByName = new Map()
   for (const cat of GENERAL_CATEGORIES) {
     const existing = await prisma.category.findFirst({
       where: { name: cat.name, userId: null },
     })
     if (!existing) {
-      await prisma.category.create({
+      const created = await prisma.category.create({
         data: {
           id: crypto.randomUUID(),
           userId: null,
@@ -62,9 +130,41 @@ async function main() {
           sortOrder: cat.sortOrder,
         },
       })
+      categoryByName.set(created.name, created)
       console.log('Created general category: ' + cat.name)
     } else {
+      categoryByName.set(existing.name, existing)
       console.log('General category already exists: ' + cat.name)
+    }
+  }
+
+  for (const rule of DEFAULT_KEYWORD_RULES) {
+    const category = categoryByName.get(rule.categoryName)
+    if (!category) continue
+
+    for (const keyword of rule.keywords) {
+      const normalizedKeyword = normalizeKeyword(keyword)
+      const existing = await prisma.categoryKeyword.findFirst({
+        where: {
+          userId: null,
+          categoryId: category.id,
+          normalizedKeyword,
+        },
+      })
+
+      if (existing) continue
+
+      await prisma.categoryKeyword.create({
+        data: {
+          id: crypto.randomUUID(),
+          userId: null,
+          categoryId: category.id,
+          keyword: keyword.trim(),
+          normalizedKeyword,
+          confidence: rule.confidence,
+        },
+      })
+      console.log(`Created default keyword "${keyword}" for ${rule.categoryName}`)
     }
   }
 }
